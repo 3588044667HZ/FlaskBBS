@@ -1,0 +1,177 @@
+{% extends "base.html" %}
+{% from "_comment.html" import render_comment with context %}
+{% block title %}{{ post.title }} - Flask论坛{% endblock %}
+
+{% block content %}
+<div class="container py-3">
+    <!-- 返回按钮（移动端） -->
+    <div class="d-block d-md-none mb-3">
+        <a href="javascript:history.back()" class="btn btn-light border">
+            <i class="bi bi-arrow-left"></i> 返回
+        </a>
+    </div>
+
+    <!-- 帖子内容 -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <div class="d-flex justify-content-between align-items-start mb-2">
+                <h1 class="card-title h3 mb-0">{{ post.title }}</h1>
+                {% if post.category %}
+                <span class="badge bg-primary align-self-start">
+                    {{ post.category.name }}
+                </span>
+                {% endif %}
+            </div>
+
+            <div class="d-flex align-items-center text-muted small mb-3">
+                <a href="{{ url_for('main.user_profile', username=post.author.username) }}"
+                   class="d-flex align-items-center text-decoration-none text-muted">
+                    <img src="{{ post.author.avatar_url() }}" class="rounded-circle me-2" width="24" height="24"
+                         alt="头像">
+                    <span>{{ post.author.username }}</span>
+                </a>
+                <span class="mx-2">•</span>
+                <span>{{ post.created_at|time_ago }}</span>
+                <span class="mx-2">•</span>
+                <span><i class="bi bi-eye"></i> {{ post.views }}</span>
+                {% if post.last_updated != post.created_at %}
+                <span class="mx-2">•</span>
+                <span>编辑于 {{ post.last_updated|time_ago }}</span>
+                {% endif %}
+            </div>
+
+            <div class="post-content mb-4">
+                {{ post.content | safe_markdown }}
+            </div>
+
+            {% if current_user and (current_user == post.author or current_user.is_admin) %}
+            <div class="d-flex justify-content-end gap-2">
+                <a href="{{ url_for('main.edit_post', post_id=post.id) }}" class="btn btn-sm btn-outline-secondary">
+                    <i class="bi bi-pencil"></i> 编辑
+                </a>
+                <button type="button" class="btn btn-sm btn-outline-danger" data-bs-toggle="modal"
+                        data-bs-target="#deleteModal">
+                    <i class="bi bi-trash"></i> 删除
+                </button>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- 评论部分 -->
+    <div class="card mb-4">
+        <div class="card-header bg-light">
+            <h2 class="h5 mb-0">
+                <i class="bi bi-chat-left-text me-2"></i>评论
+                <span class="badge bg-secondary ms-2">{{ post.comment_count }}</span>
+            </h2>
+        </div>
+
+        <div class="card-body">
+            <!-- 评论表单 -->
+            <div class="mb-4">
+                {% if current_user and current_user.is_authenticated %}
+                <form method="POST" action="{{ url_for('main.post_detail', post_id=post.id) }}">
+                    {{ form.hidden_tag() }}
+                    <div class="mb-3">
+                        <textarea name="content" class="form-control"
+                                  rows="3" placeholder="写下你的评论..."
+                                  required></textarea>
+                    </div>
+                    <div class="d-flex justify-content-end">
+                        <button type="submit" class="btn btn-primary">提交评论</button>
+                    </div>
+                </form>
+                {% else %}
+                <div class="alert alert-info mb-0">
+                    请<a href="{{ url_for('auth.login') }}">登录</a>后发表评论
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- 评论列表 -->
+            <div class="comments mt-4">
+                {% if comments %}
+                {% for comment in comments %}
+                {{ render_comment(comment, post) }}
+                {% endfor %}
+                {% else %}
+                <div class="text-center py-4">
+                    <p class="text-muted">还没有评论，快来发表第一条评论吧！</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 删除帖子模态框 -->
+<div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="deleteModalLabel">确认删除</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                确定要删除帖子 "{{ post.title }}" 吗？此操作无法撤销。
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                <form action="{{ url_for('main.delete_post', post_id=post.id) }}" method="POST">
+                    <button type="submit" class="btn btn-danger">确认删除</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// 回复按钮功能
+document.querySelectorAll('.comment-reply-btn').forEach(button => {
+    button.addEventListener('click', function() {
+        const commentId = this.dataset.commentId;
+        const username = this.dataset.username;
+        const replyForm = document.getElementById(`reply-form-${commentId}`);
+
+        // 隐藏所有其他回复表单
+        document.querySelectorAll('.reply-form').forEach(form => {
+            form.classList.add('d-none');
+        });
+
+        // 显示当前回复表单
+        replyForm.classList.remove('d-none');
+
+        // 滚动到表单位置
+        replyForm.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+        // 聚焦到文本区域
+        const textarea = replyForm.querySelector('textarea');
+        textarea.focus();
+        textarea.value = `@${username} `;
+    });
+});
+
+// 取消回复按钮
+document.querySelectorAll('.cancel-reply-btn').forEach(button => {
+    button.addEventListener('click', function() {
+        this.closest('.reply-form').classList.add('d-none');
+    });
+});
+
+// 按回车提交评论（Shift+Enter换行）
+document.querySelectorAll('textarea[name="content"]').forEach(textarea => {
+    textarea.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            this.form.submit();
+        }
+    });
+});
+
+
+
+</script>
+{% endblock %}

@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1 class="mb-4">添加新分类</h1>
+    
+    <form method="POST">
+        {{ form.hidden_tag() }}
+        
+        <div class="mb-3">
+            {{ form.name.label(class="form-label") }}
+            {{ form.name(class="form-control") }}
+            {% if form.name.errors %}
+                <div class="invalid-feedback d-block">
+                    {% for error in form.name.errors %}
+                        {{ error }}
+                    {% endfor %}
+                </div>
+            {% endif %}
+        </div>
+        
+        <div class="d-flex justify-content-between">
+            <a href="{{ url_for('main.list_categories') }}" class="btn btn-secondary">
+                取消
+            </a>
+            {{ form.submit(class="btn btn-primary") }}
+        </div>
+    </form>
+</div>
+{% endblock %}

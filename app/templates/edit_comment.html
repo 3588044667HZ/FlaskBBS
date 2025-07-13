@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block title %}编辑评论 - Flask论坛{% endblock %}
+
+{% block content %}
+<div class="container py-3">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="h4 mb-0">编辑评论</h1>
+        <a href="{{ url_for('main.post_detail', post_id=comment.post_id) }}#comment-{{ comment.id }}" 
+           class="btn btn-sm btn-outline-secondary">
+            取消
+        </a>
+    </div>
+    
+    <div class="card mb-3">
+        <div class="card-body">
+            <div class="d-flex align-items-center mb-3">
+                <img src="{{ comment.author.avatar_url() }}" 
+                     class="rounded-circle me-2" 
+                     width="40" 
+                     height="40" 
+                     alt="头像">
+                <div>
+                    <div class="fw-bold">{{ comment.author.username }}</div>
+                    <div class="text-muted small">
+                        评论于 {{ comment.created_at|time_ago }}
+                    </div>
+                </div>
+            </div>
+            
+            <form method="POST">
+                {{ form.hidden_tag() }}
+                <div class="mb-3">
+                    {{ form.content.label(class="form-label visually-hidden") }}
+                    {{ form.content(class="form-control", rows=4) }}
+                </div>
+                <div class="d-flex justify-content-end">
+                    <button type="submit" class="btn btn-primary">更新评论</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <div class="alert alert-info">
+        <i class="bi bi-info-circle me-2"></i>
+        注意：编辑评论后，系统会显示编辑时间标记
+    </div>
+</div>
+{% endblock %}

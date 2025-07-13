@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>编辑用户权限: {{ user.username }}</h2>
+
+    <form method="POST">
+        <div class="card mb-4">
+            <div class="card-header">基本权限</div>
+            <div class="card-body">
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" name="can_view" id="can_view"
+                           {% if user.has_permission(Permissions.VIEW) %}checked{% endif %}>
+                    <label class="form-check-label" for="can_view">查看内容</label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" name="can_post" id="can_post"
+                           {% if user.has_permission(Permissions.POST) %}checked{% endif %}>
+                    <label class="form-check-label" for="can_post">发布帖子</label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" name="can_comment" id="can_comment"
+                           {% if user.has_permission(Permissions.COMMENT) %}checked{% endif %}>
+                    <label class="form-check-label" for="can_comment">发表评论</label>
+                </div>
+            </div>
+        </div>
+
+        <div class="card mb-4">
+            <div class="card-header">编辑权限</div>
+            <div class="card-body">
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" name="can_edit_own" id="can_edit_own"
+                           {% if user.has_permission(Permissions.EDIT_OWN) %}checked{% endif %}>
+                    <label class="form-check-label" for="can_edit_own">编辑自己的内容</label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" name="can_edit_any" id="can_edit_any"
+                           {% if user.has_permission(Permissions.EDIT_ANY) %}checked{% endif %}>
+                    <label class="form-check-label" for="can_edit_any">编辑任何内容</label>
+                </div>
+            </div>
+        </div>
+
+        <div class="card mb-4">
+            <div class="card-header">删除权限</div>
+            <div class="card-body">
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" name="can_delete_own" id="can_delete_own"
+                           {% if user.has_permission(Permissions.DELETE_OWN) %}checked{% endif %}>
+                    <label class="form-check-label" for="can_delete_own">删除自己的内容</label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" name="can_delete_any" id="can_delete_any"
+                           {% if user.has_permission(Permissions.DELETE_ANY) %}checked{% endif %}>
+                    <label class="form-check-label" for="can_delete_any">删除任何内容</label>
+                </div>
+            </div>
+        </div>
+
+        <div class="card mb-4">
+            <div class="card-header">管理权限</div>
+            <div class="card-body">
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" name="can_moderate" id="can_moderate"
+                           {% if user.has_permission(Permissions.MODERATE) %}checked{% endif %}>
+                    <label class="form-check-label" for="can_moderate">内容审核</label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" name="can_manage_users" id="can_manage_users"
+                           {% if user.has_permission(Permissions.MANAGE_USERS) %}checked{% endif %}>
+                    <label class="form-check-label" for="can_manage_users">用户管理</label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" name="is_admin" id="is_admin"
+                           {% if user.has_permission(Permissions.ADMIN) %}checked{% endif %}>
+                    <label class="form-check-label" for="is_admin">系统管理员</label>
+                </div>
+            </div>
+        </div>
+
+        <button type="submit" class="btn btn-primary">保存更改</button>
+        <a href="{{ url_for('admin.users') }}" class="btn btn-secondary">取消</a>
+    </form>
+</div>
+{% endblock %}

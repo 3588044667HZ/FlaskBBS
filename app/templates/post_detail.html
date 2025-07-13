@@ -1,0 +1,292 @@
+{% extends "base.html" %}
+{% from "_comment.html" import render_comment with context %}
+{% block title %}{{ post.title }} - Flask论坛{% endblock %}
+
+{% block head %}
+{{ super() }}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/styles/github.min.css">
+<style>
+    .post-content {
+        line-height: 1.7;
+    }
+
+    .post-content h1, .post-content h2, .post-content h3, .post-content h4 {
+        margin-top: 1.5rem;
+        margin-bottom: 1rem;
+        font-weight: 600;
+        border-bottom: 1px solid #eaecef;
+        padding-bottom: 0.3rem;
+    }
+
+    .post-content h1 {
+        font-size: 1.8rem;
+    }
+
+    .post-content h2 {
+        font-size: 1.6rem;
+    }
+
+    .post-content h3 {
+        font-size: 1.4rem;
+    }
+
+    .post-content h4 {
+        font-size: 1.2rem;
+    }
+
+    .post-content p {
+        margin-bottom: 1rem;
+    }
+
+    .post-content blockquote {
+        border-left: 4px solid #dfe2e5;
+        padding: 0 1rem;
+        color: #6a737d;
+        margin: 1rem 0;
+    }
+
+    .post-content pre {
+        background-color: #f6f8fa;
+        border-radius: 6px;
+        padding: 1rem;
+        overflow: auto;
+        margin-bottom: 1rem;
+    }
+
+    .post-content code {
+        background-color: #f6f8fa;
+        padding: 0.2em 0.4em;
+        border-radius: 3px;
+        font-size: 0.95em;
+    }
+
+    .post-content ul, .post-content ol {
+        margin-bottom: 1rem;
+        padding-left: 2rem;
+    }
+
+    .post-content li {
+        margin-bottom: 0.5rem;
+    }
+
+    .post-content table {
+        border-collapse: collapse;
+        width: 100%;
+        margin-bottom: 1rem;
+    }
+
+    .post-content th, .post-content td {
+        border: 1px solid #dfe2e5;
+        padding: 0.5rem 1rem;
+    }
+
+    .post-content th {
+        background-color: #f6f8fa;
+        font-weight: 600;
+    }
+
+    .post-content a {
+        color: #0366d6;
+        text-decoration: none;
+    }
+
+    .post-content a:hover {
+        text-decoration: underline;
+    }
+
+    .post-content img {
+        max-width: 100%;
+        height: auto;
+        display: block;
+        margin: 1rem auto;
+        border-radius: 4px;
+    }
+
+
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-3">
+    <!-- 返回按钮（移动端） -->
+    <div class="d-block d-md-none mb-3">
+        <a href="javascript:history.back()" class="btn btn-light border">
+            <i class="bi bi-arrow-left"></i> 返回
+        </a>
+    </div>
+
+    <!-- 帖子内容 -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <div class="d-flex justify-content-between align-items-start mb-2">
+                <h1 class="card-title h3 mb-0">{{ post.title }}</h1>
+                {% if post.category %}
+                <span class="badge bg-primary align-self-start">
+                    {{ post.category.name }}
+                </span>
+                {% endif %}
+            </div>
+
+            <div class="d-flex align-items-center text-muted small mb-3">
+                <a href="{{ url_for('main.user_profile', username=post.author.username) }}"
+                   class="d-flex align-items-center text-decoration-none text-muted">
+                    <img src="{{ post.author.avatar_url() }}" class="rounded-circle me-2" width="24" height="24"
+                         alt="头像">
+                    <span>{{ post.author.username }}</span>
+                </a>
+                <span class="mx-2">•</span>
+                <span>{{ post.created_at|time_ago }}</span>
+                <span class="mx-2">•</span>
+                <span><i class="bi bi-eye"></i> {{ post.views }}</span>
+                {% if post.last_updated != post.created_at %}
+                <span class="mx-2">•</span>
+                <span>编辑于 {{ post.last_updated|time_ago }}</span>
+                {% endif %}
+            </div>
+
+            <div class="post-content mb-4" id="postContent">
+                <!-- 内容将在JS中渲染 -->
+                {{ post.content|escape }}
+            </div>
+
+            {% if current_user and (current_user == post.author or current_user.is_admin) %}
+            <div class="d-flex justify-content-end gap-2">
+                <a href="{{ url_for('main.edit_post', post_id=post.id) }}" class="btn btn-sm btn-outline-secondary">
+                    <i class="bi bi-pencil"></i> 编辑
+                </a>
+                <button type="button" class="btn btn-sm btn-outline-danger" data-bs-toggle="modal"
+                        data-bs-target="#deleteModal">
+                    <i class="bi bi-trash"></i> 删除
+                </button>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- 评论区域 -->
+    <div class="card mb-4">
+        <div class="card-header bg-light">
+            <h2 class="h5 mb-0">
+                <i class="bi bi-chat-text me-2"></i>评论
+                <span class="badge bg-secondary ms-2">{{ post.comment_count }}</span>
+            </h2>
+        </div>
+
+        <div class="card-body">
+            <!-- 评论列表 -->
+            <!-- 评论列表 -->
+            {% if top_level_comments %}
+            <div class="comments-container mb-4">
+                {% for comment in top_level_comments %}
+                {{ render_comment(comment, post, 0) }}
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="text-center py-4 text-muted">
+                <i class="bi bi-chat-square-text display-6"></i>
+                <p class="mt-2 mb-0">还没有评论，快来抢沙发吧~</p>
+            </div>
+            {% endif %}
+
+            <!-- 发表评论表单 -->
+            <!-- 发表评论表单 -->
+            {% if current_user.is_authenticated %}
+            <form method="POST" action="{{ url_for('main.add_comment', post_id=post.id) }}">
+                {{ form.hidden_tag() }}
+                <div class="mb-3">
+                    <textarea name="content" class="form-control" rows="4" placeholder="写下你的评论..." required></textarea>
+                </div>
+                <div class="d-flex justify-content-end">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-send me-2"></i>发表评论
+                    </button>
+                </div>
+            </form>
+            {% else %}
+            <div class="alert alert-info">
+                <a href="{{ url_for('auth.login') }}" class="alert-link">登录</a>后即可发表评论
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- 删除帖子确认模态框 -->
+<div class="modal fade" id="deleteModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">确认删除</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                确定要删除这篇帖子吗？该操作不可恢复！
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                <form action="{{ url_for('main.delete_post', post_id=post.id) }}" method="POST">
+                    <button type="submit" class="btn btn-danger">确认删除</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script src="https://cdn.jsdelivr.net/npm/marked@4.3.0/marked.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.1/dist/purify.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/highlight.min.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // 渲染帖子内容
+        const postContentElement = document.getElementById('postContent');
+        if (postContentElement) {
+            const rawContent = postContentElement.textContent;
+
+            // 使用Marked解析Markdown
+            const html = marked.parse(rawContent);
+
+            // 使用DOMPurify进行安全过滤
+            const cleanHtml = DOMPurify.sanitize(html);
+
+            // 更新内容
+            postContentElement.innerHTML = cleanHtml;
+
+            // 高亮代码块
+            document.querySelectorAll('pre code').forEach((block) => {
+                hljs.highlightElement(block);
+            });
+        }
+
+        // 回复按钮点击事件
+        document.querySelectorAll('.comment-reply-btn').forEach(button => {
+            button.addEventListener('click', function () {
+                const commentId = this.dataset.commentId;
+                const replyForm = document.getElementById(`reply-form-${commentId}`);
+
+                // 隐藏所有其他回复表单
+                document.querySelectorAll('.reply-form').forEach(form => {
+                    form.classList.add('d-none');
+                });
+
+                // 显示当前回复表单
+                replyForm.classList.remove('d-none');
+
+                // 滚动到表单位置
+                replyForm.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            });
+        });
+
+        // 取消回复按钮
+        document.querySelectorAll('.cancel-reply-btn').forEach(button => {
+            button.addEventListener('click', function () {
+                this.closest('.reply-form').classList.add('d-none');
+            });
+        });
+    });
+
+
+</script>
+{% endblock %}

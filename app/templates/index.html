@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% import "_pagination.html" as pagination %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="h3 mb-0">最新帖子</h1>
+    <a href="{{ url_for('main.list_categories') }}" class="btn btn-sm btn-outline-primary d-none d-md-inline-block">
+        浏览分类
+    </a>
+</div>
+
+{% if current_user.is_authenticated %}
+<div class="d-grid gap-2 mb-4">
+    <a href="{{ url_for('main.create_post') }}" class="btn btn-primary">
+        <i class="bi bi-plus-circle me-1"></i> 发布新帖
+    </a>
+</div>
+{% else %}
+<div class="alert alert-info mb-4">
+    请<a href="{{ url_for('auth.login') }}">登录</a>或<a href="{{ url_for('auth.register') }}">注册</a>来发布帖子
+</div>
+{% endif %}
+
+{% if posts.items %}
+<div class="list-group">
+    {% for post in posts.items %}
+    <a href="{{ url_for('main.post_detail', post_id=post.id) }}" class="list-group-item list-group-item-action">
+        <div class="d-flex w-100 justify-content-between">
+            <h5 class="mb-1">{{ post.title }}</h5>
+            <small>{{ post.created_at }}</small>
+        </div>
+
+        <div class="d-flex justify-content-between align-items-center mt-2">
+            <div class="d-flex align-items-center">
+                <img src="{{ post.author.avatar_url() }}" class="rounded-circle me-2" width="24" height="24" alt="头像">
+                <small>{{ post.author.username }}</small>
+            </div>
+
+            <div>
+                {% if post.category %}
+                <span class="badge bg-primary">{{ post.category.name }}</span>
+                {% endif %}
+                <span class="text-muted ms-2">
+                    <i class="bi bi-chat-left me-1"></i>{{ post.comment_count }}
+                </span>
+            </div>
+        </div>
+    </a>
+    {% endfor %}
+</div>
+
+{{ pagination.render_pagination(posts, 'main.index') }}
+
+{% else %}
+<div class="card">
+    <div class="card-body text-center py-5">
+        <i class="bi bi-info-circle display-5 text-muted mb-3"></i>
+        <h5 class="card-title">还没有帖子</h5>
+        <p class="card-text">快来发布第一个帖子吧！</p>
+        {% if current_user.is_authenticated %}
+        <a href="{{ url_for('main.create_post') }}" class="btn btn-primary mt-2">
+            发布新帖
+        </a>
+        {% endif %}
+    </div>
+</div>
+{% endif %}
+{% endblock %}

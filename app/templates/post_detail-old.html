@@ -1,0 +1,127 @@
+{% extends "base.html" %}
+{% block title %}{{ post.title }} - Flask论坛{% endblock %}
+
+{% block content %}
+<div class="container">
+    <!-- 返回按钮（移动端） -->
+    <div class="d-block d-md-none mb-3">
+        <a href="javascript:history.back()" class="btn btn-light border">
+            <i class="bi bi-arrow-left"></i> 返回
+        </a>
+    </div>
+
+    <div class="card mb-4">
+        <div class="card-body">
+            <div class="d-flex justify-content-between align-items-start mb-2">
+                <h1 class="card-title h4 mb-0">{{ post.title }}</h1>
+                {% if post.category %}
+                <span class="badge bg-primary align-self-start">
+                    {{ post.category.name }}
+                </span>
+                {% endif %}
+            </div>
+
+            <div class="d-flex align-items-center text-muted small mb-3">
+                <a href="{{ url_for('main.user_profile', username=post.author.username) }}"
+                   class="d-flex align-items-center text-decoration-none text-muted">
+                    <img src="{{ post.author.avatar_url() }}" class="rounded-circle me-2" width="24" height="24"
+                         alt="头像">
+                    <span>{{ post.author.username }}</span>
+                </a>
+                <span class="mx-2">•</span>
+                <span>{{ post.created_at.strftime('%Y-%m-%d %H:%M') }}</span>
+                {% if post.last_updated != post.created_at %}
+                <span class="mx-2">•</span>
+                <span>编辑于 {{ post.last_updated.strftime('%Y-%m-%d %H:%M') }}</span>
+                {% endif %}
+            </div>
+
+            <div class="post-content mb-4">
+                {{ post.content | safe_markdown }}
+            </div>
+
+            {% if current_user == post.author or current_user.is_admin %}
+            <div class="d-flex justify-content-end gap-2">
+                <a href="{{ url_for('main.edit_post', post_id=post.id) }}" class="btn btn-sm btn-outline-secondary">
+                    <i class="bi bi-pencil"></i> 编辑
+                </a>
+                <button type="button" class="btn btn-sm btn-outline-danger" data-bs-toggle="modal"
+                        data-bs-target="#deleteModal">
+                    <i class="bi bi-trash"></i> 删除
+                </button>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- 评论部分 -->
+    <div class="card">
+        <div class="card-header bg-light">
+            <h2 class="h5 mb-0">评论</h2>
+        </div>
+        <div class="card-body">
+            {% if current_user.is_authenticated %}
+            <form method="POST"
+                  action="{{ url_for('main.add_comment', post_id=post.id,user_id=current_user.id) }}">
+                <div class="mb-3">
+                    <textarea class="form-control" name="content" rows="3" placeholder="写下你的评论..." required></textarea>
+                </div>
+                <button type="submit" class="btn btn-primary btn-sm">提交评论</button>
+            </form>
+            <hr>
+            {% else %}
+            <div class="alert alert-info mb-4">
+                请<a href="{{ url_for('auth.login') }}">登录</a>后发表评论
+            </div>
+            {% endif %}
+
+            {% if post.comments %}
+            <div class="comments">
+                {% for comment in post.comments %}
+                <div class="comment mb-3">
+                    <div class="d-flex align-items-center mb-2">
+                        <a href="{{ url_for('main.user_profile', username=comment.author.username) }}"
+                           class="d-flex align-items-center text-decoration-none">
+                            <img src="{{ comment.author.avatar_url() }}" class="rounded-circle me-2" width="24"
+                                 height="24" alt="头像">
+                            <strong class="me-2">{{ comment.author.username }}</strong>
+                        </a>
+                        <small class="text-muted">{{ comment.created_at.strftime('%Y-%m-%d %H:%M') }}</small>
+                    </div>
+                    <p class="mb-0">{{ comment.content }}</p>
+                </div>
+                {% if not loop.last %}
+                <hr>
+                {% endif %}
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="text-center py-4">
+                <p class="text-muted">还没有评论，快来发表第一条评论吧！</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- 删除确认模态框 -->
+<div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="deleteModalLabel">确认删除</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                确定要删除帖子 "{{ post.title }}" 吗？此操作无法撤销。
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                <form action="{{ url_for('main.delete_post', post_id=post.id) }}" method="POST">
+                    <button type="submit" class="btn btn-danger">确认删除</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

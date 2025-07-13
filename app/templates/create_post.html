@@ -1,0 +1,392 @@
+{% extends "base.html" %}
+{% block title %}发布新帖 - Flask论坛{% endblock %}
+
+{% block head %}
+{{ super() }}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/easymde@2.18.0/dist/easymde.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<style>
+    .editor-container {
+        border: 1px solid #ced4da;
+        border-radius: 0.375rem;
+        overflow: hidden;
+        margin-bottom: 1rem;
+    }
+    .editor-header {
+        background-color: #f8f9fa;
+        border-bottom: 1px solid #ced4da;
+        padding: 0.5rem 1rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    .editor-tabs {
+        display: flex;
+        gap: 0.5rem;
+    }
+    .editor-tab {
+        padding: 0.5rem 1rem;
+        cursor: pointer;
+        border: none;
+        background: none;
+        font-weight: 500;
+        color: #6c757d;
+    }
+    .editor-tab.active {
+        color: #0d6efd;
+        border-bottom: 2px solid #0d6efd;
+    }
+    .editor-body {
+        display: flex;
+        min-height: 400px;
+    }
+    .editor-column {
+        flex: 1;
+        padding: 1rem;
+        overflow-y: auto;
+    }
+    .editor-column:first-child {
+        border-right: 1px solid #ced4da;
+    }
+    .editor-help {
+        background-color: #f8f9fa;
+        border-radius: 0.375rem;
+        padding: 1rem;
+        margin-top: 1rem;
+    }
+    .markdown-preview {
+        padding: 1rem;
+    }
+    .markdown-preview img {
+        max-width: 100%;
+        height: auto;
+    }
+    .markdown-preview pre {
+        background-color: #f8f9fa;
+        padding: 1rem;
+        border-radius: 0.375rem;
+        overflow: auto;
+    }
+    .markdown-preview code {
+        background-color: #f8f9fa;
+        padding: 0.2rem 0.4rem;
+        border-radius: 0.25rem;
+    }
+    .markdown-cheatsheet {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+        gap: 1.5rem;
+        margin-top: 1rem;
+    }
+    .cheatsheet-item {
+        background-color: #f8f9fa;
+        border-radius: 0.5rem;
+        padding: 1rem;
+    }
+    .cheatsheet-item h5 {
+        border-bottom: 1px solid #dee2e6;
+        padding-bottom: 0.5rem;
+        margin-bottom: 1rem;
+    }
+    .cheatsheet-example {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1rem;
+        margin-bottom: 1rem;
+    }
+    .cheatsheet-example:last-child {
+        margin-bottom: 0;
+    }
+    .cheatsheet-input {
+        font-family: monospace;
+        background-color: #e9ecef;
+        padding: 0.5rem;
+        border-radius: 0.25rem;
+    }
+    .cheatsheet-output {
+        padding: 0.5rem;
+    }
+    .editor-actions {
+        display: flex;
+        gap: 0.5rem;
+    }
+    .btn-sm {
+        padding: 0.25rem 0.5rem;
+        font-size: 0.875rem;
+    }
+    .error-message {
+        color: #dc3545;
+        font-size: 0.875rem;
+        margin-top: 0.25rem;
+    }
+    .is-invalid {
+        border-color: #dc3545 !important;
+    }
+
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="h3 mb-0">发布新帖</h1>
+        <a href="{{ url_for('main.index') }}" class="btn btn-sm btn-outline-secondary">
+            <i class="fas fa-times me-1"></i> 取消
+        </a>
+    </div>
+
+    <form method="POST" id="postForm">
+        {{ form.hidden_tag() }}
+
+        <div class="mb-3">
+            {{ form.title.label(class="form-label") }}
+            {{ form.title(class="form-control form-control-lg") }}
+            {% if form.title.errors %}
+            <div class="invalid-feedback d-block">
+                {% for error in form.title.errors %}
+                {{ error }}
+                {% endfor %}
+            </div>
+            {% endif %}
+        </div>
+
+        <div class="mb-3">
+            {{ form.category.label(class="form-label") }}
+            {{ form.category(class="form-select form-select-lg") }}
+        </div>
+
+        <div class="mb-4">
+            <label class="form-label fw-bold">内容</label>
+            <div id="contentEditorContainer">
+                <!-- 使用可见的 textarea 用于初始化 -->
+                <textarea id="markdownEditor" name="content" style="display: none;"></textarea>
+
+                <div class="editor-container">
+                    <div class="editor-header">
+                        <div class="editor-tabs">
+                            <button class="editor-tab active" type="button" data-tab="edit">编辑</button>
+                            <button class="editor-tab" type="button" data-tab="preview">预览</button>
+                            <button class="editor-tab" type="button" data-tab="both">分屏</button>
+                        </div>
+                        <div class="editor-actions">
+                            <button type="button" class="btn btn-sm btn-outline-secondary" id="toggleHelp">
+                                <i class="fas fa-question-circle me-1"></i> Markdown帮助
+                            </button>
+                        </div>
+                    </div>
+                    <div class="editor-body">
+                        <div class="editor-column" id="editColumn">
+                            <div id="editorContainer"></div>
+                        </div>
+                        <div class="editor-column" id="previewColumn">
+                            <div class="markdown-preview" id="markdownPreview"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="error-message" id="contentError" style="display: none;">
+                    内容不能为空
+                </div>
+
+                <div class="editor-help" id="helpSection" style="display: none;">
+                    <h5 class="mb-3"><i class="fas fa-lightbulb me-2"></i>Markdown语法速查表</h5>
+                    <div class="markdown-cheatsheet">
+                        <div class="cheatsheet-item">
+                            <h5>标题</h5>
+                            <div class="cheatsheet-example">
+                                <div class="cheatsheet-input"># H1<br>## H2<br>### H3</div>
+                                <div class="cheatsheet-output">
+                                    <h1>H1</h1>
+                                    <h2>H2</h2>
+                                    <h3>H3</h3>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="cheatsheet-item">
+                            <h5>文本样式</h5>
+                            <div class="cheatsheet-example">
+                                <div class="cheatsheet-input">**粗体**<br>*斜体*<br>~~删除线~~</div>
+                                <div class="cheatsheet-output">
+                                    <strong>粗体</strong><br>
+                                    <em>斜体</em><br>
+                                    <del>删除线</del>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="cheatsheet-item">
+                            <h5>列表</h5>
+                            <div class="cheatsheet-example">
+                                <div class="cheatsheet-input">- 项目1<br>- 项目2<br>&nbsp;&nbsp;- 子项目</div>
+                                <div class="cheatsheet-output">
+                                    <ul>
+                                        <li>项目1</li>
+                                        <li>项目2
+                                            <ul>
+                                                <li>子项目</li>
+                                            </ul>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="cheatsheet-item">
+                            <h5>代码</h5>
+                            <div class="cheatsheet-example">
+                                <div class="cheatsheet-input">`内联代码`<br><br>```python<br>代码块<br>```</div>
+                                <div class="cheatsheet-output">
+                                    <code>内联代码</code>
+                                    <pre><code class="language-python">代码块</code></pre>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="d-grid">
+            <button type="submit" class="btn btn-primary btn-lg">
+                <i class="fas fa-paper-plane me-2"></i> 发布帖子
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script src="https://cdn.jsdelivr.net/npm/easymde@2.18.0/dist/easymde.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/marked@4.3.0/marked.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.1/dist/purify.min.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // 确保表单字段存在
+        const formContentField = document.getElementById('markdownEditor');
+        if (!formContentField) {
+            console.error('找不到内容字段');
+            return;
+        }
+
+        // 初始化Markdown编辑器
+        const easyMDE = new EasyMDE({
+            element: formContentField,
+            autoDownloadFontAwesome: false,
+            spellChecker: false,
+            status: false,
+            minHeight: "350px",
+            placeholder: "在此输入内容...",
+            toolbar: [
+                "bold", "italic", "strikethrough", "|",
+                "heading-1", "heading-2", "heading-3", "|",
+                "code", "quote", "|",
+                "unordered-list", "ordered-list", "|",
+                "link", "image", "|",
+                "preview", "side-by-side", "fullscreen", "|",
+                "guide"
+            ],
+            initialValue: `#支持md语法`
+        });
+
+        // 添加自定义预览功能
+        const updatePreview = () => {
+            const content = easyMDE.value();
+            const previewElement = document.getElementById('markdownPreview');
+
+            // 使用Marked解析Markdown
+            const html = marked.parse(content);
+
+            // 使用DOMPurify进行安全过滤
+            const cleanHtml = DOMPurify.sanitize(html);
+
+            // 更新预览内容
+            previewElement.innerHTML = cleanHtml;
+
+            // 清除错误状态
+            if (content.trim()) {
+                document.querySelector('.editor-container').classList.remove('is-invalid');
+                document.getElementById('contentError').style.display = 'none';
+            }
+        };
+
+        // 监听编辑器变化
+        easyMDE.codemirror.on('change', updatePreview);
+
+        // 初始渲染预览
+        updatePreview();
+
+        // 标签切换功能
+        const tabs = document.querySelectorAll('.editor-tab');
+        const editColumn = document.getElementById('editColumn');
+        const previewColumn = document.getElementById('previewColumn');
+
+        tabs.forEach(tab => {
+            tab.addEventListener('click', () => {
+                // 移除所有active类
+                tabs.forEach(t => t.classList.remove('active'));
+
+                // 添加active类到当前标签
+                tab.classList.add('active');
+
+                // 根据选择的标签显示/隐藏列
+                const tabType = tab.dataset.tab;
+
+                if (tabType === 'edit') {
+                    editColumn.style.display = 'block';
+                    previewColumn.style.display = 'none';
+                } else if (tabType === 'preview') {
+                    editColumn.style.display = 'none';
+                    previewColumn.style.display = 'block';
+                } else if (tabType === 'both') {
+                    editColumn.style.display = 'block';
+                    previewColumn.style.display = 'block';
+                    editColumn.style.flex = '1';
+                    previewColumn.style.flex = '1';
+                }
+
+                // 刷新编辑器布局
+                setTimeout(() => {
+                    easyMDE.codemirror.refresh();
+                }, 100);
+            });
+        });
+
+        // 初始化标签状态
+        document.querySelector('[data-tab="edit"]').click();
+
+        // 帮助面板切换
+        document.getElementById('toggleHelp').addEventListener('click', function() {
+            const helpSection = document.getElementById('helpSection');
+            if (helpSection.style.display === 'none') {
+                helpSection.style.display = 'block';
+                this.innerHTML = '<i class="fas fa-times me-1"></i> 关闭帮助';
+            } else {
+                helpSection.style.display = 'none';
+                this.innerHTML = '<i class="fas fa-question-circle me-1"></i> Markdown帮助';
+            }
+        });
+
+        // 表单提交处理
+        document.getElementById('postForm').addEventListener('submit', function(e) {
+            // 确保内容同步
+            easyMDE.codemirror.save();
+
+            // 验证内容是否为空
+            if (!easyMDE.value().trim()) {
+                e.preventDefault();
+                document.querySelector('.editor-container').classList.add('is-invalid');
+                document.getElementById('contentError').style.display = 'block';
+
+                // 滚动到错误位置
+                document.getElementById('contentEditorContainer').scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'center'
+                });
+            }
+        });
+    });
+
+</script>
+{% endblock %}

@@ -1,0 +1,125 @@
+{# 评论组件 - 递归渲染 #}
+{% macro render_comment(comment, post, depth=0) %}
+<div class="comment mb-3" id="comment-{{ comment.id }}">
+    <div class="card border-0">
+        <div class="card-body p-3">
+            <!-- 添加层级指示器 -->
+            {% if depth > 0 %}
+            <div class="position-absolute top-0 start-0 h-100" style="width: 4px; background-color: #dee2e6;"></div>
+            {% endif %}
+
+            <div class="d-flex align-items-start">
+                <!-- 用户头像（添加空值检查） -->
+                {% if comment.author %}
+                <a href="{{ url_for('main.user_profile', username=comment.author_username) }}" class="me-2">
+                    <img src="{{ comment.author.avatar_url() }}" class="rounded-circle" width="40" height="40"
+                         alt="{{ comment.author_username }}的头像">
+                </a>
+                {% else %}
+                <div class="me-2">
+                    <img src="/static/profile_pics/default.jpg" class="rounded-circle" width="40" height="40"
+                         alt="已注销用户">
+                </div>
+                {% endif %}
+
+                <div class="flex-grow-1">
+                    <!-- 评论头部 -->
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <div>
+                            {% if comment.author %}
+                            <a href="{{ url_for('main.user_profile', username=comment.author_username) }}"
+                               class="text-decoration-none fw-bold me-2">
+                                {{ comment.author_username }}
+                            </a>
+                            {% else %}
+                            <span class="text-decoration-none fw-bold me-2">
+                                已注销用户
+                            </span>
+                            {% endif %}
+                            <span class="text-muted small">
+                                {{ comment.created_at|time_ago }}
+                                {% if comment.updated_at and comment.updated_at > comment.created_at %}
+                                (编辑于 {{ comment.updated_at|time_ago }})
+                                {% endif %}
+                            </span>
+                        </div>
+
+                        {% set current_user = current_user or none %}
+                        {% if current_user and current_user.is_authenticated and
+                        (current_user == comment.author or current_user.is_admin) %}
+                        <div class="dropdown">
+                            <button class="btn btn-sm btn-link text-muted p-0" type="button" data-bs-toggle="dropdown"
+                                    aria-expanded="false">
+                                <i class="bi bi-three-dots"></i>
+                            </button>
+                            <ul class="dropdown-menu">
+                                {% if current_user == comment.author %}
+                                <li>
+                                    <a class="dropdown-item"
+                                       href="{{ url_for('main.edit_comment', comment_id=comment.id) }}">
+                                        <i class="bi bi-pencil me-2"></i>编辑
+                                    </a>
+                                </li>
+                                {% endif %}
+                                <li>
+                                    <form method="POST"
+                                          action="{{ url_for('main.delete_comment', comment_id=comment.id) }}"
+                                          class="d-inline">
+                                        <button type="submit" class="dropdown-item text-danger"
+                                                onclick="return confirm('确定要删除这条评论吗？')">
+                                            <i class="bi bi-trash me-2"></i>删除
+                                        </button>
+                                    </form>
+                                </li>
+                            </ul>
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- 评论内容 -->
+                    <div class="comment-content mb-2">
+                        {{ comment.content|urlize|safe }}
+                    </div>
+
+                    <!-- 评论操作 -->
+                    <div class="d-flex align-items-center small">
+                        <button class="btn btn-sm btn-link text-muted p-0 me-2 comment-reply-btn"
+                                data-comment-id="{{ comment.id }}"
+                                data-username="{{ comment.author.username if comment.author else '已注销用户' }}">
+                            <i class="bi bi-reply"></i> 回复
+                        </button>
+
+                        <span class="text-muted">
+                            <i class="bi bi-chat"></i> {{ comment.replies|length or 0 }}
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 回复表单（默认隐藏） -->
+<div class="reply-form mt-2 d-none" id="reply-form-{{ comment.id }}" style="margin-left: {{ 30 + depth * 30 }}px;">
+    <form method="POST" action="{{ url_for('main.add_comment', post_id=post.id) }}">
+        <input type="hidden" name="parent_id" value="{{ comment.id }}">
+        <div class="mb-2">
+            <textarea name="content" class="form-control form-control-sm" rows="2"
+                      placeholder="回复 @{{ comment.author.username if comment.author else '已注销用户' }}" required></textarea>
+        </div>
+        <div class="d-flex justify-content-end gap-2">
+            <button type="button" class="btn btn-sm btn-light cancel-reply-btn">取消</button>
+            <button type="submit" class="btn btn-sm btn-primary">回复</button>
+        </div>
+    </form>
+</div>
+
+<!-- 子评论（递归渲染） -->
+{% if comment.replies %}
+<div class="replies" style="margin-left: {{ 30 + depth * 30 }}px;">
+    {% for reply in comment.replies %}
+    {{ render_comment(reply, post, depth + 1) }}
+    {% endfor %}
+</div>
+{% endif %}
+{% endmacro %}
