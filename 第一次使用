@@ -1,0 +1,48 @@
+# 启动Python解释器
+python
+
+# 在Python shell中
+>>> from app import create_app, db
+>>> app = create_app()
+>>> app.app_context().push()
+>>> db.create_all()
+>>> exit()
+
+# 运行应用
+python run.py
+
+更新数据库
+from app import create_app, db
+app = create_app()
+app.app_context().push()
+db.drop_all()  # 删除旧表
+db.create_all()  # 创建新表
+
+# 添加一些初始分类
+>>> from app.models import Category
+>>> categories = ['技术讨论', '资源共享', '问题求助', '社区公告']
+>>> for name in categories:
+...     category = Category(name=name)
+...     db.session.add(category)
+...
+>>> db.session.commit()
+>>> exit()
+
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+                <small class="text-muted">
+                    显示 {{ posts.first }} - {{ posts.last }} 条，共 {{ posts.total }} 条
+                </small>
+                <small class="text-muted">
+                    第 {{ posts.page }} 页 / 共 {{ posts.pages }} 页
+                </small>
+            </div>
+
+            # 进入 Python shell
+python
+
+>>> from app import create_app, db
+>>> app = create_app()
+>>> app.app_context().push()
+>>> db.create_all()
+>>> exit()

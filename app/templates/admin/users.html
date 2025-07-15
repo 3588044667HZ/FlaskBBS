@@ -1,0 +1,204 @@
+<!-- templates/admin/users.html -->
+{% extends "admin/base.html" %}
+
+{% block admin_content %}
+<h2>用户管理</h2>
+
+<!-- 搜索和过滤区域 -->
+<div class="row mb-4">
+    <div class="col-md-8">
+        <form action="{{ url_for('admin.users') }}" method="get" class="d-flex">
+            <div class="input-group">
+                <input type="text" name="q" class="form-control" placeholder="搜索用户名或邮箱..."
+                       value="{{ request.args.get('q', '') }}">
+                <button class="btn btn-primary" type="submit">
+                    <i class="bi bi-search"></i> 搜索
+                </button>
+            </div>
+        </form>
+    </div>
+    <div class="col-md-4 text-end">
+        <div class="dropdown">
+            <button class="btn btn-outline-secondary dropdown-toggle" type="button" id="roleFilter"
+                    data-bs-toggle="dropdown" aria-expanded="false">
+                <i class="bi bi-funnel"></i> 按角色筛选
+            </button>
+            <ul class="dropdown-menu" aria-labelledby="roleFilter">
+                <li><a class="dropdown-item" href="{{ url_for('admin.users') }}">所有用户</a></li>
+                <li><a class="dropdown-item" href="{{ url_for('admin.users', role='admin') }}">管理员</a></li>
+                <li><a class="dropdown-item" href="{{ url_for('admin.users', role='moderator') }}">版主</a></li>
+                <li><a class="dropdown-item" href="{{ url_for('admin.users', role='user') }}">普通用户</a></li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+<!-- 用户列表表格 -->
+<div class="card">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>用户</th>
+                        <th>邮箱</th>
+                        <th>注册时间</th>
+                        <th>最后活跃</th>
+                        <th>角色</th>
+                        <th>状态</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for user in users.items %}
+                    <tr>
+                        <td>{{ user.id }}</td>
+                        <td>
+                            <div class="d-flex align-items-center">
+                                <img src="{{ user.avatar_url() }}" class="rounded-circle me-2" width="36" height="36">
+                                <div>
+                                    <strong>{{ user.username }}</strong>
+                                    <div class="small text-muted">帖子: {{ user.posts.count() }}</div>
+                                </div>
+                            </div>
+                        </td>
+                        <td>{{ user.email }}</td>
+                        <td>
+                            <span class="d-block">{{ user.created_at.strftime('%Y-%m-%d') }}</span>
+                            <small class="text-muted">{{ user.created_at|time_ago }}</small>
+                        </td>
+                        <td>
+                            <span class="d-block">{{ user.last_seen.strftime('%Y-%m-%d %H:%M') }}</span>
+                            <small class="text-muted">{{ user.last_seen|time_ago }}</small>
+                        </td>
+                        <td>
+                            {% if user.is_admin() %}
+                                <span class="badge bg-danger">管理员</span>
+                            {% elif user.has_permission(Permissions.MODERATE) %}
+                                <span class="badge bg-warning">版主</span>
+                            {% else %}
+                                <span class="badge bg-primary">普通用户</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if user.is_active %}
+                                <span class="badge bg-success">活跃</span>
+                            {% else %}
+                                <span class="badge bg-secondary">禁用</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="btn-group btn-group-sm">
+                                <a href="{{ url_for('admin.edit_user', user_id=user.id) }}"
+                                   class="btn btn-outline-primary" title="编辑">
+                                    <i class="bi bi-pencil"></i>
+                                </a>
+                                <a href="{{ url_for('admin.reset_user_password', user_id=user.id) }}"
+                                   class="btn btn-outline-secondary" title="重置密码">
+                                    <i class="bi bi-key"></i>
+                                </a>
+                                {% if not user.is_admin() %}
+                                <button class="btn btn-outline-danger" title="删除"
+                                        data-bs-toggle="modal" data-bs-target="#deleteUserModal"
+                                        data-user-id="{{ user.id }}" data-user-name="{{ user.username }}">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="8" class="text-center py-4">没有找到用户</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- 分页控件 -->
+        <nav aria-label="用户分页">
+            <ul class="pagination justify-content-center">
+                {% if users.has_prev %}
+                <li class="page-item">
+                    <a class="page-link" href="{{ url_for('admin.users', page=users.prev_num, q=request.args.get('q'), role=request.args.get('role')) }}">
+                        &laquo; 上一页
+                    </a>
+                </li>
+                {% else %}
+                <li class="page-item disabled">
+                    <a class="page-link" href="#" tabindex="-1">&laquo; 上一页</a>
+                </li>
+                {% endif %}
+
+                {% for page_num in users.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=3) %}
+                    {% if page_num %}
+                        {% if users.page == page_num %}
+                        <li class="page-item active"><a class="page-link" href="#">{{ page_num }}</a></li>
+                        {% else %}
+                        <li class="page-item">
+                            <a class="page-link" href="{{ url_for('admin.users', page=page_num, q=request.args.get('q'), role=request.args.get('role')) }}">
+                                {{ page_num }}
+                            </a>
+                        </li>
+                        {% endif %}
+                    {% else %}
+                        <li class="page-item disabled"><span class="page-link">...</span></li>
+                    {% endif %}
+                {% endfor %}
+
+                {% if users.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="{{ url_for('admin.users', page=users.next_num, q=request.args.get('q'), role=request.args.get('role')) }}">
+                        下一页 &raquo;
+                    </a>
+                </li>
+                {% else %}
+                <li class="page-item disabled">
+                    <a class="page-link" href="#" tabindex="-1">下一页 &raquo;</a>
+                </li>
+                {% endif %}
+            </ul>
+        </nav>
+    </div>
+</div>
+
+<!-- 删除用户确认模态框 -->
+<div class="modal fade" id="deleteUserModal" tabindex="-1" aria-labelledby="deleteUserModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="deleteUserModalLabel">确认删除用户</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>您确定要删除用户 <strong id="userNameToDelete"></strong> 吗？</p>
+                <p class="text-danger">此操作不可撤销，并且会删除该用户的所有帖子和评论！</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                <form id="deleteUserForm" method="POST" action="">
+                    <button type="submit" class="btn btn-danger">确认删除</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // 删除用户模态框初始化
+    document.getElementById('deleteUserModal').addEventListener('show.bs.modal', function (event) {
+        const button = event.relatedTarget;
+        const userId = button.getAttribute('data-user-id');
+        const userName = button.getAttribute('data-user-name');
+
+        const modal = this;
+        modal.querySelector('#userNameToDelete').textContent = userName;
+
+        // 设置表单的action属性
+        const form = modal.querySelector('#deleteUserForm');
+        form.action = "{{ url_for('admin.delete_user', user_id=0) }}".replace('0', userId);
+    });
+</script>
+{% endblock %}

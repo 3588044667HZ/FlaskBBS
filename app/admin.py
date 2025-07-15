@@ -1,12 +1,11 @@
 # app/admin.py
-import os
+# import os
 from datetime import datetime, timedelta
 
-from PIL import Image
-from flask import Blueprint, render_template, redirect, url_for, flash, request, current_app
+# from PIL import Image
+from flask import Blueprint, render_template, redirect, url_for, flash, request
 # from flask_login import login_required, current_user
 from sqlalchemy.orm import joinedload
-from werkzeug.utils import secure_filename
 
 from app import db
 from app.decorators import admin_required
@@ -33,7 +32,7 @@ def dashboard():
 
 @admin_bp.route('/users')
 @admin_required
-def users():
+def users():  # todo 补全筛选功能
     """用户管理列表"""
     page = request.args.get('page', 1, type=int)
     per_page = 20
@@ -46,33 +45,8 @@ def users():
 def edit_user(user_id):
     """编辑用户信息"""
     user = User.query.get_or_404(user_id)
-    form = AdminUserForm(obj=user)
 
-    if form.validate_on_submit():
-        user.username = form.username.data
-        user.email = form.email.data
-        user.permissions = form.permissions.data
-        user.is_active = form.is_active.data
-
-        # 处理头像上传
-        if form.avatar.data:
-            avatar_file = form.avatar.data
-            filename = secure_filename(f"{user.id}_{avatar_file.filename}")
-            avatar_path = os.path.join(current_app.root_path, 'static', 'profile_pics', filename)
-
-            # 调整图片大小
-            output_size = (150, 150)
-            img = Image.open(avatar_file)
-            img.thumbnail(output_size)
-            img.save(avatar_path)
-
-            user.avatar = filename
-
-        db.session.commit()
-        flash('用户信息已更新', 'success')
-        return redirect(url_for('admin.users'))
-
-    return render_template('admin/edit_user.html', form=form, user=user, Permissions=Permissions)
+    return render_template('admin/edit_user.html', user=user, Permissions=Permissions)
 
 
 @admin_bp.route('/posts')
@@ -235,3 +209,82 @@ def reset_user_password(user_id):
         return redirect(url_for('admin.edit_user', user_id=user_id))
 
     return render_template('admin/reset_password.html', user=user)
+
+
+@admin_bp.route('/change_user_info/<int:user_id>', methods=['POST'])
+@admin_required
+def change_user_info(user_id):
+    form = AdminUserForm(request.form)  # 接收前端信息
+    user = User.query.get_or_404(user_id)
+    print(form.can_edit_any.data)
+    if form.can_comment:
+        user.add_permission(Permissions.EDIT_ANY)
+    else:
+        user.remove_permission(Permissions.EDIT_ANY)
+    if form.can_comment.data:
+        user.add_permission(Permissions.COMMENT)
+    else:
+        user.remove_permission(Permissions.COMMENT)
+    if form.can_delete_any:
+        user.add_permission(Permissions.DELETE_ANY)
+    else:
+        user.remove_permission(Permissions.DELETE_ANY)
+    if form.can_delete_own:
+        user.add_permission(Permissions.DELETE_OWN)
+    else:
+        user.remove_permission(Permissions.DELETE_OWN)
+    if form.can_edit_own:
+        user.add_permission(Permissions.EDIT_OWN)
+    else:
+        user.remove_permission(Permissions.EDIT_OWN)
+    if form.can_manage_users:
+        user.add_permission(Permissions.MANAGE_USERS)
+    else:
+        user.remove_permission(Permissions.MANAGE_USERS)
+    if form.can_moderate:
+        user.add_permission(Permissions.MODERATE)
+    else:
+        user.remove_permission(Permissions.MODERATE)
+    if form.can_post:
+        user.add_permission(Permissions.POST)
+    else:
+        user.remove_permission(Permissions.POST)
+    if form.can_view:
+        user.add_permission(Permissions.VIEW)
+    else:
+        user.remove_permission(Permissions.VIEW)
+    if form.is_admin:
+        user.add_permission(Permissions.ADMIN)
+    else:
+        user.remove_permission(Permissions.ADMIN)
+    # if form.validate_on_submit():
+    #     user.username = form.username.data
+    #     user.email = form.email.data
+    #     # user.permissions = form.permissions.data
+    #     user.is_active = form.is_active.data
+    #
+    #     # 处理头像上传
+    #     if form.avatar.data:
+    #         avatar_file = form.avatar.data
+    #         filename = secure_filename(f"{user.id}_{avatar_file.filename}")
+    #         avatar_path = os.path.join(current_app.root_path, 'static', 'profile_pics', filename)
+    #
+    #         # 调整图片大小
+    #         output_size = (150, 150)
+    #         img = Image.open(avatar_file)
+    #         img.thumbnail(output_size)
+    #         img.save(avatar_path)
+    #
+    #         user.avatar = filename
+
+    db.session.commit()
+    flash('用户信息已更新', 'success')
+    return redirect(url_for('admin.users'))
+
+
+@admin_bp.route('/delete_user/<int:user_id>', methods=['POST'])
+@admin_required
+def delete_user(user_id):
+    user = User.query.get_or_404(user_id)
+    User.query.delete(user)
+    return redirect((url_for('admin.users')))

@@ -71,13 +71,23 @@ class CommentForm(FlaskForm):  # 发表评论表单
 
 
 class AdminUserForm(FlaskForm):
-    """管理员编辑用户表单"""
-    username = StringField('用户名', validators=[DataRequired(), Length(min=3, max=20)])
-    email = StringField('邮箱', validators=[DataRequired(), Email()])
-    avatar = FileField('头像', validators=[
-        FileAllowed(['jpg', 'jpeg', 'png'], '只允许上传图片文件')
-    ])
-    permissions = IntegerField('权限掩码', validators=[DataRequired()])
+    """管理员编辑用户权限表单"""
+    # username = StringField('用户名', validators=[DataRequired(), Length(min=3, max=20)])
+    # email = StringField('邮箱', validators=[DataRequired(), Email()])
+    # avatar = FileField('头像', validators=[
+    #     FileAllowed(['jpg', 'jpeg', 'png'], '只允许上传图片文件')
+    # ])
+    # permissions = IntegerField('权限掩码', validators=[DataRequired()])
+    is_admin = BooleanField('是否为管理员', validators=[DataRequired()])
+    can_manage_users = BooleanField('用户管理', validators=[DataRequired()])
+    can_moderate = BooleanField("内容审核", validators=[DataRequired()])
+    can_delete_any = BooleanField('删除任何内容', validators=[DataRequired()])
+    can_delete_own = BooleanField("删除自己的内容", validators=[DataRequired()])
+    can_edit_any = BooleanField('编辑任何内容', validators=[DataRequired()])
+    can_edit_own = BooleanField('编辑自己的内容', validators=[DataRequired()])
+    can_view = BooleanField('查看内容', validators=[DataRequired()])
+    can_post = BooleanField('发布帖子', validators=[DataRequired()])
+    can_comment = BooleanField('发表评论', validators=[DataRequired()])
     is_active = BooleanField('激活状态')
     submit = SubmitField('更新')
 
