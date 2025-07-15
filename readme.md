@@ -21,16 +21,13 @@ features:
   **没有实现任何点赞功能**
 
 实现效果：
+<img width="1904" height="905" alt="image-20250713125715447" src="https://github.com/user-attachments/assets/bef83131-14e0-4acc-8cba-ff12ab66dca9" />
+<img width="1914" height="901" alt="image-20250713125737970" src="https://github.com/user-attachments/assets/ccf746c6-5189-4734-81ba-037f3c382326" />
+<img width="1820" height="707" alt="image-20250713125755252" src="https://github.com/user-attachments/assets/e683ebe3-f172-4e60-8023-cbe6f44bcf30" />
+<img width="1901" height="890" alt="image-20250713130046312" src="https://github.com/user-attachments/assets/73927dc8-9a11-45a8-bcd6-219ebbddda45" />
+<img width="1893" height="892" alt="image-20250713130111296" src="https://github.com/user-attachments/assets/e8191707-6b27-4b84-857f-10643269a348" />
 
-![image-20250713125715447](C:\Users\Administrator\AppData\Roaming\Typora\typora-user-images\image-20250713125715447.png)
 
-![image-20250713125737970](C:\Users\Administrator\AppData\Roaming\Typora\typora-user-images\image-20250713125737970.png)
-
-![image-20250713125755252](C:\Users\Administrator\AppData\Roaming\Typora\typora-user-images\image-20250713125755252.png)
-
-![image-20250713130046312](C:\Users\Administrator\AppData\Roaming\Typora\typora-user-images\image-20250713130046312.png)
-
-![image-20250713130111296](C:\Users\Administrator\AppData\Roaming\Typora\typora-user-images\image-20250713130111296.png)
 
 **登录管理员页面的url:/admin/login**
 
