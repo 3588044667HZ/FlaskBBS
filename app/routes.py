@@ -133,6 +133,7 @@ def post_detail(post_id):
 
     # 创建一个按父评论ID分组的字典
     comments_by_parent = {}
+    print("post.comments:", post.comments)
     for comment in post.comments:
         if comment.parent_id not in comments_by_parent:
             comments_by_parent[comment.parent_id] = []
@@ -144,9 +145,12 @@ def post_detail(post_id):
             comment.replies = sorted(comments_by_parent[comment.id], key=lambda c: c.created_at)
         else:
             comment.replies = []
-
+    print("comments_by_parent:", comments_by_parent)
     # 获取顶级评论（parent_id为None）
-    top_level_comments = sorted(comments_by_parent.get(None, []), key=lambda c: c.created_at)
+    top_level_comments = sorted(comments_by_parent.get("", []), key=lambda c: c.created_at)
+    for i in comments_by_parent.get("", []):
+        print(i.id)
+    print("top_level_comments:", top_level_comments)
 
     form = CommentForm()
 
@@ -441,6 +445,7 @@ def add_comment(post_id):
     # 直接从请求中获取数据
     content = request.form.get('content', '').strip()
     parent_id = request.form.get('parent_id', None)
+    print("add_comment:", content, parent_id)
 
     # 验证内容非空
     if not content:

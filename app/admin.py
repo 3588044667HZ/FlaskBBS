@@ -216,7 +216,7 @@ def reset_user_password(user_id):
 def change_user_info(user_id):
     form = AdminUserForm(request.form)  # 接收前端信息
     user = User.query.get_or_404(user_id)
-    print(form.can_edit_any.data)
+    # print(form.can_edit_any.data)
     if form.can_comment:
         user.add_permission(Permissions.EDIT_ANY)
     else:
