@@ -1,0 +1,742 @@
+{% extends "base.html" %}
+{%block head%}
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>消息界面 - 选项卡切换优化</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<style>
+    * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+        font-family: "Microsoft YaHei", sans-serif;
+    }
+
+    body {
+        background-color: #f4f4f4;
+        color: #333;
+        line-height: 1.6;
+        padding: 20px;
+    }
+
+    .message-container {
+        display: flex;
+        max-width: 1200px;
+        margin: 0 auto;
+        background: #fff;
+        border-radius: 8px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        overflow: hidden;
+        height: calc(100vh - 100px);
+    }
+
+    /* 左侧会话列表样式 */
+    .sidebar {
+        width: 320px;
+        border-right: 1px solid #e7e7e7;
+        display: flex;
+        flex-direction: column;
+        background-color: #fafafa;
+    }
+
+    .sidebar-header {
+        padding: 16px;
+        border-bottom: 1px solid #e7e7e7;
+        background-color: #fff;
+    }
+
+    .sidebar-title {
+        font-size: 18px;
+        font-weight: 600;
+        color: #18191c;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+
+    .search-box {
+        margin-top: 12px;
+        position: relative;
+    }
+
+    .search-box input {
+        width: 100%;
+        padding: 8px 12px 8px 32px;
+        border: 1px solid #e7e7e7;
+        border-radius: 4px;
+        font-size: 14px;
+        outline: none;
+        transition: border-color 0.2s;
+    }
+
+    .search-box input:focus {
+        border-color: #00a1d6;
+    }
+
+    .search-box i {
+        position: absolute;
+        left: 10px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: #999;
+    }
+
+    .session-list {
+        flex: 1;
+        overflow-y: auto;
+    }
+
+    .session-item {
+        display: flex;
+        padding: 12px 16px;
+        cursor: pointer;
+        border-bottom: 1px solid #f0f0f0;
+        transition: background-color 0.2s;
+        position: relative;
+    }
+
+    .session-item:hover {
+        background-color: #f5f5f5;
+    }
+
+    .session-item.active {
+        background-color: #e6f7ff;
+        border-right: 3px solid #00a1d6;
+    }
+
+    .session-avatar {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        margin-right: 12px;
+        overflow: hidden;
+        flex-shrink: 0;
+    }
+
+    .session-avatar img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    .session-content {
+        flex: 1;
+        min-width: 0;
+    }
+
+    .session-header {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 4px;
+    }
+
+    .session-name {
+        font-weight: 600;
+        font-size: 14px;
+        color: #18191c;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .session-time {
+        font-size: 12px;
+        color: #999;
+        flex-shrink: 0;
+    }
+
+    .session-preview {
+        font-size: 13px;
+        color: #666;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .unread-badge {
+        position: absolute;
+        top: 12px;
+        right: 16px;
+        background-color: #f56c6c;
+        color: white;
+        border-radius: 10px;
+        min-width: 18px;
+        height: 18px;
+        font-size: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    /* 右侧消息区域样式 */
+    .message-area {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        background-color: #fff;
+        height: 100%;
+    }
+
+    .message-header {
+        padding: 12px 16px;
+        border-bottom: 1px solid #e7e7e7;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        background-color: #fff;
+        flex-shrink: 0;
+    }
+
+    .contact-info {
+        display: flex;
+        align-items: center;
+    }
+
+    .contact-avatar {
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        margin-right: 10px;
+        overflow: hidden;
+    }
+
+    .contact-avatar img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    .contact-name {
+        font-weight: 600;
+        font-size: 16px;
+    }
+
+    .header-actions {
+        display: flex;
+        gap: 12px;
+    }
+
+    .action-btn {
+        background: none;
+        border: none;
+        color: #666;
+        cursor: pointer;
+        font-size: 16px;
+        transition: color 0.2s;
+    }
+
+    .action-btn:hover {
+        color: #00a1d6;
+    }
+
+    .message-list {
+        flex: 1;
+        padding: 16px;
+        overflow-y: auto;
+        background-color: #f7f7f7;
+        min-height: 0;
+    }
+
+    .message-date {
+        text-align: center;
+        margin: 16px 0;
+        font-size: 12px;
+        color: #999;
+    }
+
+    .message-bubble {
+        max-width: 70%;
+        margin-bottom: 16px;
+        display: flex;
+        align-items: flex-start;
+    }
+
+    .message-bubble.received {
+        align-self: flex-start;
+    }
+
+    .message-bubble.sent {
+        align-self: flex-end;
+        flex-direction: row-reverse;
+        margin-left: auto;
+    }
+
+    .message-avatar {
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        margin: 0 8px;
+        flex-shrink: 0;
+    }
+
+    .message-avatar img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    .message-content {
+        background: #fff;
+        border-radius: 4px;
+        padding: 8px 12px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        position: relative;
+        max-width: 100%;
+    }
+
+    .message-bubble.sent .message-content {
+        background: #e1f5fe;
+    }
+
+    .message-text {
+        font-size: 14px;
+        line-height: 1.5;
+        word-wrap: break-word;
+    }
+
+    .message-time {
+        font-size: 12px;
+        color: #999;
+        margin-top: 4px;
+        text-align: right;
+    }
+
+    .message-input-area {
+        padding: 16px;
+        border-top: 1px solid #e7e7e7;
+        background-color: #fff;
+        flex-shrink: 0;
+    }
+
+    .input-toolbar {
+        display: flex;
+        align-items: center;
+        margin-bottom: 10px;
+        gap: 10px;
+    }
+
+    .tool-btn {
+        background: none;
+        border: none;
+        color: #666;
+        cursor: pointer;
+        font-size: 16px;
+        transition: color 0.2s;
+    }
+
+    .tool-btn:hover {
+        color: #00a1d6;
+    }
+
+    .message-input {
+        width: 100%;
+        border: 1px solid #e7e7e7;
+        border-radius: 4px;
+        padding: 10px 12px;
+        resize: none;
+        outline: none;
+        font-size: 14px;
+        min-height: 60px;
+        transition: border-color 0.2s;
+    }
+
+    .message-input:focus {
+        border-color: #00a1d6;
+    }
+
+    .send-btn {
+        background-color: #00a1d6;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        padding: 8px 16px;
+        margin-top: 10px;
+        cursor: pointer;
+        font-size: 14px;
+        transition: background-color 0.2s;
+    }
+
+    .send-btn:hover {
+        background-color: #0090c1;
+    }
+
+    .system-notice {
+        background-color: #f0f7ff;
+        border-left: 3px solid #00a1d6;
+        padding: 12px;
+        margin-bottom: 16px;
+        border-radius: 4px;
+    }
+
+    .notice-title {
+        font-weight: 600;
+        margin-bottom: 6px;
+        color: #00a1d6;
+    }
+
+    .notice-text {
+        font-size: 14px;
+        line-height: 1.5;
+    }
+
+    .empty-state {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        height: 100%;
+        color: #999;
+    }
+
+    .empty-state i {
+        font-size: 48px;
+        margin-bottom: 16px;
+    }
+
+    /* 响应式设计 */
+    @media (max-width: 768px) {
+        .message-container {
+            flex-direction: column;
+            height: auto;
+        }
+
+        .sidebar {
+            width: 100%;
+            max-height: 40vh;
+        }
+
+        .message-area {
+            min-height: 60vh;
+        }
+    }
+</style>
+{%endblock%}
+
+{% block content%}
+
+<div class="message-container">
+    <!-- 左侧会话列表 -->
+    <div class="sidebar">
+        <div class="sidebar-header">
+            <div class="sidebar-title">
+                <span>最近消息</span>
+                <i class="fas fa-cog"></i>
+            </div>
+            <div class="search-box">
+                <i class="fas fa-search"></i>
+                <input type="text" placeholder="搜索消息" id="searchInput">
+            </div>
+        </div>
+        <div class="session-list" id="sessionList">
+            <!-- 会话项将通过JavaScript动态生成 -->
+        </div>
+    </div>
+
+    <!-- 右侧消息区域 -->
+    <div class="message-area">
+        <div class="message-header">
+            <div class="contact-info">
+                <div class="contact-avatar">
+                    <img id="currentContactAvatar" src="" alt="">
+                </div>
+                <div class="contact-name" id="currentContactName">选择对话开始聊天</div>
+            </div>
+            <div class="header-actions">
+                <button class="action-btn"><i class="fas fa-phone-alt"></i></button>
+                <button class="action-btn"><i class="fas fa-video"></i></button>
+                <button class="action-btn"><i class="fas fa-ellipsis-h"></i></button>
+            </div>
+        </div>
+
+        <div class="message-list" id="messageList">
+            <div class="empty-state" id="emptyState">
+                <i class="fas fa-comments"></i>
+                <h5>选择一个对话开始聊天</h5>
+                <p>从左侧选择一个对话，或者开始新的对话</p>
+            </div>
+        </div>
+
+        <div class="message-input-area" id="messageInputArea" style="display: none;">
+            <div class="input-toolbar">
+                <button class="tool-btn"><i class="far fa-smile"></i></button>
+                <button class="tool-btn"><i class="far fa-image"></i></button>
+                <button class="tool-btn"><i class="fas fa-paperclip"></i></button>
+                <button class="tool-btn"><i class="far fa-file"></i></button>
+            </div>
+            <textarea class="message-input" id="messageInput" placeholder="输入消息..."></textarea>
+            <button class="send-btn" id="sendBtn">发送</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    sessions = {};
+    // 模拟数据 - 会话列表
+
+
+    // 当前选中的会话ID
+    let currentSessionId = null;
+
+    // DOM 元素
+    const sessionList = document.getElementById('sessionList');
+    const messageList = document.getElementById('messageList');
+    const emptyState = document.getElementById('emptyState');
+    const messageInputArea = document.getElementById('messageInputArea');
+    const messageInput = document.getElementById('messageInput');
+    const sendBtn = document.getElementById('sendBtn');
+    const currentContactName = document.getElementById('currentContactName');
+    const currentContactAvatar = document.getElementById('currentContactAvatar');
+    const searchInput = document.getElementById('searchInput');
+
+    // 初始化会话列表
+    function initSessionList() {
+        let xhr = new XMLHttpRequest();
+        xhr.open("GET", "/get_all_sessions", false);
+        xhr.send();
+        // 判断
+        // 成功，接收到数据
+        console.log(xhr.response);                 // 查看返回的数据(可输出 xhr 哈)
+        sessions = JSON.parse(xhr.response);
+        console.log("sessions", sessions);
+        //JSON.parse(xhr.response);                // 如果数据为字符串的对象，可转换一下
+
+        sessionList.innerHTML = '';
+
+        sessions.forEach(session => {
+            const sessionItem = document.createElement('div');
+            sessionItem.className = 'session-item';
+            sessionItem.dataset.id = session.id;
+
+            sessionItem.innerHTML = `
+                    <div class="session-avatar">
+                        <img src="${session.avatar}" alt="${session.name}">
+                    </div>
+                    <div class="session-content">
+                        <div class="session-header">
+                            <div class="session-name">${session.name}</div>
+                            <div class="session-time">${session.time}</div>
+                        </div>
+                        <div class="session-preview">${session.lastMessage}</div>
+                    </div>
+                    ${session.unread > 0 ? `<div class="unread-badge">${session.unread}</div>` : ''}
+                `;
+
+            sessionItem.addEventListener('click', () => switchSession(session.id));
+            sessionList.appendChild(sessionItem);
+        });
+
+        // 默认选中第一个会话
+        if (sessions.length > 0) {
+            switchSession(sessions[0].id);
+        }
+    }
+
+    // 切换会话
+    function switchSession(sessionId) {
+        currentSessionId = sessionId;
+
+        // 更新会话列表中的选中状态
+        document.querySelectorAll('.session-item').forEach(item => {
+            item.classList.toggle('active', item.dataset.id == sessionId);
+
+            // 移除未读标记
+            if (item.dataset.id == sessionId) {
+                const unreadBadge = item.querySelector('.unread-badge');
+                if (unreadBadge) {
+                    unreadBadge.remove();
+                }
+            }
+        });
+
+        // 更新当前会话数据
+        const session = sessions.find(s => s.id == sessionId);
+        if (session) {
+            currentContactName.textContent = session.name;
+            currentContactAvatar.src = session.avatar;
+            currentContactAvatar.alt = session.name;
+
+            // 显示消息区域
+            emptyState.style.display = 'none';
+            messageInputArea.style.display = 'block';
+
+            // 渲染消息列表
+            renderMessages(session.messages);
+        }
+    }
+
+    // 渲染消息列表
+    function renderMessages(messages) {
+        messageList.innerHTML = '';
+
+        if (messages.length === 0) {
+            messageList.innerHTML = `
+                    <div class="empty-state">
+                        <i class="fas fa-comments"></i>
+                        <h5>还没有消息</h5>
+                        <p>发送第一条消息开始对话</p>
+                    </div>
+                `;
+            return;
+        }
+
+        messages.forEach(message => {
+            if (message.type === 'system') {
+                const systemMessage = document.createElement('div');
+                systemMessage.className = 'system-notice';
+                systemMessage.innerHTML = `
+                        <div class="notice-title">${message.title}</div>
+                        <div class="notice-text">${message.content}</div>
+                    `;
+                messageList.appendChild(systemMessage);
+            } else {
+                const messageBubble = document.createElement('div');
+                messageBubble.className = `message-bubble ${message.type}`;
+
+                if (message.type === 'received') {
+                    const session = sessions.find(s => s.id == currentSessionId);
+                    messageBubble.innerHTML = `
+                            <div class="message-avatar">
+                                <img src="${session.avatar}" alt="${session.name}">
+                            </div>
+                            <div class="message-content">
+                                <div class="message-text">${message.content}</div>
+                                <div class="message-time">${message.time}</div>
+                            </div>
+                        `;
+                } else {
+                    messageBubble.innerHTML = `
+                            <div class="message-content">
+                                <div class="message-text">${message.content}</div>
+                                <div class="message-time">${message.time}</div>
+                            </div>
+                            <div class="message-avatar">
+                                <img src="{{user.avatar_url()}}" alt="我">
+                            </div>
+                        `;
+                }
+
+                messageList.appendChild(messageBubble);
+            }
+        });
+
+        // 滚动到底部
+        messageList.scrollTop = messageList.scrollHeight;
+    }
+
+    // 发送消息
+    function sendMessage() {
+        const content = messageInput.value.trim();
+        if (!content || !currentSessionId) return;
+
+        const session = sessions.find(s => s.id == currentSessionId);
+        if (session) {
+            // 添加到消息列表
+            const newMessage = {
+                type: 'sent',
+                content: content,
+                time: '刚刚'
+            };
+
+            session.messages.push(newMessage);
+
+            // 更新会话预览
+            session.lastMessage = content.length > 30 ? content.substring(0, 30) + '...' : content;
+            session.time = '刚刚';
+
+            // 重新渲染消息列表
+            renderMessages(session.messages);
+
+            let xhr = new XMLHttpRequest();
+
+            xhr.open("POST", "/send_message", true);
+            xhr.setRequestHeader('Content-Type', 'application/json')
+            var data = JSON.stringify({content: messageInput.value, session_id: session.id, user_id: session.user_id});
+            console.log(data);
+            xhr.send(data);
+            xhr.onreadystatechange = function () {                  // 判断
+                if (xhr.readyState == 4 && xhr.status == 200) {   // 成功，接收到数据
+                    console.log(xhr.response);                 // 查看返回的数据(可输出 xhr 哈)
+                    //JSON.parse(xhr.response);                // 如果数据为字符串的对象，可转换一下
+                } else if (xhr.status == 404) {
+                    alert('发送失败');
+                    // 失败，页面未找到
+                }
+            }
+
+            // 清空输入框
+            messageInput.value = '';
+
+            // 模拟回复（3秒后）
+            setTimeout(() => {
+                const replyMessage = {
+                    type: 'received',
+                    content: `[自动回复] 感谢您的留言，我们会尽快回复您！`,
+                    time: '刚刚'
+                };
+
+                session.messages.push(replyMessage);
+                session.lastMessage = replyMessage.content;
+
+                // 重新渲染消息列表
+                renderMessages(session.messages);
+
+                // 更新会话列表中的预览
+                updateSessionPreview(currentSessionId);
+            }, 3000);
+
+            // 更新会话列表中的预览
+            updateSessionPreview(currentSessionId);
+        }
+    }
+
+    // 更新会话预览
+    function updateSessionPreview(sessionId) {
+        const session = sessions.find(s => s.id == sessionId);
+        if (session) {
+            const sessionItem = document.querySelector(`.session-item[data-id="${sessionId}"]`);
+            if (sessionItem) {
+                const preview = sessionItem.querySelector('.session-preview');
+                const time = sessionItem.querySelector('.session-time');
+
+                if (preview) preview.textContent = session.lastMessage;
+                if (time) time.textContent = session.time;
+            }
+        }
+    }
+
+    // 搜索功能
+    function initSearch() {
+        searchInput.addEventListener('input', function () {
+            const searchTerm = this.value.toLowerCase();
+
+            document.querySelectorAll('.session-item').forEach(item => {
+                const sessionName = item.querySelector('.session-name').textContent.toLowerCase();
+                const sessionPreview = item.querySelector('.session-preview').textContent.toLowerCase();
+
+                if (sessionName.includes(searchTerm) || sessionPreview.includes(searchTerm)) {
+                    item.style.display = 'flex';
+                } else {
+                    item.style.display = 'none';
+                }
+            });
+        });
+    }
+
+    // 初始化
+    document.addEventListener('DOMContentLoaded', function () {
+        initSessionList();
+        initSearch();
+
+        // 发送消息事件
+        sendBtn.addEventListener('click', sendMessage);
+
+        // 按Enter发送消息
+        messageInput.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+            }
+        });
+    });
+</script>
+{%endblock%}

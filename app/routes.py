@@ -1,6 +1,8 @@
+import json
 import os
 from datetime import datetime
 
+import flask
 from PIL import Image
 from flask import Blueprint, request, current_app, render_template, redirect, url_for, flash
 from flask_login import current_user, login_required
@@ -11,8 +13,10 @@ from werkzeug.utils import secure_filename
 
 from app import db
 from app.forms import CommentForm, EditPostForm, ProfileForm, PostForm
-from app.models import Post, Comment, Category, User, Permissions
+from app.models import Post, Comment, Category, User, Permissions, Session, Message
 from app.utils import base_posts_query, create_posts_with_comment_count
+
+# import json
 
 # from app.decorators import admin_required, moderate_required, edit_any_required, delete_any_required
 
@@ -532,3 +536,69 @@ def delete_comment(comment_id):
 
     flash('评论已删除', 'success')
     return redirect(url_for('main.post_detail', post_id=post_id))
+
+
+@main.route("/message_page")
+@login_required
+def message_page():
+    print('sessions:', User.query.get_or_404(current_user.id).sessions.all())
+    return render_template("message_page.html", user=current_user)
+
+
+@main.route("/chat/<int:user_id>", methods=['GET', 'POST'])
+@login_required
+def chat(user_id):
+    user = User.query.get_or_404(user_id)
+    session = Session().find_or_create(user.id, current_user.id)
+    db.session.add(session)
+    db.session.commit()
+    print('chat ', session)
+    return redirect(url_for('main.message_page'))
+
+
+@main.route("/send_message", methods=['GET', 'POST'])
+@login_required
+def send_msg():
+    print('send_msg', flask.request.json)
+    user = User.query.get_or_404(flask.request.json['user_id'])
+    # print(1)
+    message = Message(
+        sender_id=current_user.id,
+        recipient_id=user.id,
+        session_id=flask.request.json.get('session_id', -1),
+        content=flask.request.json.get('content', ''),
+    )
+    # print(2)
+    db.session.add(message)
+    # print(3)
+    db.session.commit()
+    # print('send_msg ', message)
+    # print(4)
+    return json.dumps({'msg': 'success'})
+
+
+@main.route("/get_all_sessions", methods=['GET', 'POST'])
+@login_required
+def get_all_sessions():
+    sessions = []
+    for i in User.query.get_or_404(current_user.id).sessions.all():
+        messages = []
+        for j in sorted(i.messages.all(), key=lambda m: m.created_at):
+            messages.append({
+                "type": "sent" if j.sender_id == current_user.id else "received",
+                'content': j.content,
+                "time": str(j.created_at)
+            })
+        sessions.append({
+            'id': i.id,
+            'user_id': i.get_other_user(current_user=current_user).id,
+            'name': i.get_other_user(current_user=current_user).username,
+            "avatar": i.get_other_user(current_user=current_user).avatar_url(),
+            'lastMessage': i.last_message,
+            'time': str(i.updated_at),
+            "unread": 0,
+            'messages': messages
+
+        })
+        print(sessions)
+        return json.dumps(sessions)

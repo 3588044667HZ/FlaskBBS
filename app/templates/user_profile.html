@@ -27,6 +27,9 @@
                         <i class="bi bi-pencil"></i> 编辑资料
                     </a>
                     {% endif %}
+                    <a href="{{ url_for('main.chat',user_id=user.id) }}" class="btn btn-outline-primary btn-sm">
+                        <i class="bi bi-chat"></i> 发私信
+                    </a>
                 </div>
             </div>
         </div>

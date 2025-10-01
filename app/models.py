@@ -49,7 +49,12 @@ class User(UserMixin, db.Model):
     # 统一关系命名
     posts = db.relationship('Post', backref='author', lazy='dynamic')  # 在Post处能查到作者，用法：Post.author
 
-    # comments = db.relationship('Comment', backref='author', lazy='dynamic')  # Comment初查到作者，用法：Comment.author
+    # sessions = db.relationship('Session', backref='participate', lazy='dynamic')
+
+    # sessions = db.relationship('Session', backref='author', lazy='dynamic')
+    @property
+    def sessions(self):
+        return Session.query.filter((Session.user1_id == self.id) | (Session.user2_id == self.id))
 
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
@@ -159,3 +164,80 @@ class Comment(db.Model):
 @login_manager.user_loader
 def load_user(user_id):
     return User.query.get(int(user_id))
+
+
+class Message(db.Model):  # 消息模型
+    tablename = 'message'
+    id = db.Column(db.Integer, primary_key=True)
+    sender_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    recipient_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    content = db.Column(db.Text, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    # 外键关系
+    # sender_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    # session_id = db.Column(db.Integer, db.ForeignKey('conversation.id'), nullable=False)
+    sender = db.relationship('User', foreign_keys=[sender_id], backref='sent_messages')
+
+    session_id = db.Column(db.Integer, db.ForeignKey('session.id'), nullable=False)
+
+    session = db.relationship('Session', back_populates='messages', foreign_keys=[session_id])
+
+    def __repr__(self):
+        return f'<Message {self.id} from {self.sender_id}>'
+
+
+class Session(db.Model):  # 会话记录的模型
+    __tablename__ = 'session'
+    id = db.Column(db.Integer, primary_key=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    # 关联两个用户（一对一对话）
+    user1_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    user2_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    # 最后一条消息的ID，用于快速获取最新消息
+    last_message_id = db.Column(db.Integer, db.ForeignKey('message.id'), nullable=True)
+
+    # 关系定义
+    user1 = db.relationship('User', foreign_keys=[user1_id, ], backref='conversations_as_user1')
+    user2 = db.relationship('User', foreign_keys=[user2_id, ], backref='conversations_as_user2')
+    # 调用方式：User.conversations_as_user1
+    # User.conversations_as_user2
+    last_message = db.relationship('Message', foreign_keys=[last_message_id])
+    messages = db.relationship('Message', back_populates='session', lazy='dynamic',
+                               foreign_keys='Message.session_id',  # 明确指定外键
+                               order_by='Message.created_at.desc()',
+                               cascade='all, delete-orphan')
+
+    # 唯一约束，确保同一对用户只有一个对话
+    __table_args__ = (
+        db.UniqueConstraint('user1_id', 'user2_id', name='unique_conversation_pair'),
+    )
+
+    def get_other_user(self, current_user):
+        """获取对话中的另一个用户"""
+        if current_user.id == self.user1_id:
+            return self.user2
+        else:
+            return self.user1
+
+    @classmethod
+    def find_or_create(cls, user1_id, user2_id):
+        """查找或创建两个用户之间的对话"""
+        # 确保 user1_id 总是较小的那个，避免重复对话
+        uid1, uid2 = sorted([user1_id, user2_id])
+
+        conversation = cls.query.filter_by(
+            user1_id=uid1,
+            user2_id=uid2
+        ).first()
+
+        if not conversation:
+            conversation = cls(user1_id=uid1, user2_id=uid2)
+            db.session.add(conversation)
+            db.session.commit()
+
+        return conversation
+
+    def __repr__(self):
+        return f'<Conversation {self.user1_id}-{self.user2_id}>'
