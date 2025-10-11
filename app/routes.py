@@ -541,7 +541,7 @@ def delete_comment(comment_id):
 @main.route("/message_page")
 @login_required
 def message_page():
-    print('sessions:', User.query.get_or_404(current_user.id).sessions.all())
+    # print('sessions:', User.query.get_or_404(current_user.id).sessions.all())
     return render_template("message_page.html", user=current_user)
 
 
@@ -552,14 +552,14 @@ def chat(user_id):
     session = Session().find_or_create(user.id, current_user.id)
     db.session.add(session)
     db.session.commit()
-    print('chat ', session)
+    # print('chat ', session)
     return redirect(url_for('main.message_page'))
 
 
 @main.route("/send_message", methods=['GET', 'POST'])
 @login_required
 def send_msg():
-    print('send_msg', flask.request.json)
+    # print('send_msg', flask.request.json)
     user = User.query.get_or_404(flask.request.json['user_id'])
     # print(1)
     message = Message(
@@ -600,5 +600,5 @@ def get_all_sessions():
             'messages': messages
 
         })
-        print(sessions)
+        # print(sessions)
         return json.dumps(sessions)
