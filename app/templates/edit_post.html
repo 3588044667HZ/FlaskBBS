@@ -5,6 +5,7 @@
 {{ super() }}
 <link rel="stylesheet" href="/static/css/easymde.min.css">
 <link rel="stylesheet" href="/static/css/all.min.css">
+<!--<link rel="">-->
 <style>
     .editor-container {
         border: 1px solid #ced4da;
@@ -12,6 +13,7 @@
         overflow: hidden;
         margin-bottom: 1rem;
     }
+
     .editor-header {
         background-color: #f8f9fa;
         border-bottom: 1px solid #ced4da;
@@ -20,10 +22,12 @@
         justify-content: space-between;
         align-items: center;
     }
+
     .editor-tabs {
         display: flex;
         gap: 0.5rem;
     }
+
     .editor-tab {
         padding: 0.5rem 1rem;
         cursor: pointer;
@@ -32,93 +36,113 @@
         font-weight: 500;
         color: #6c757d;
     }
+
     .editor-tab.active {
         color: #0d6efd;
         border-bottom: 2px solid #0d6efd;
     }
+
     .editor-body {
         display: flex;
         min-height: 400px;
     }
+
     .editor-column {
         flex: 1;
         padding: 1rem;
         overflow-y: auto;
     }
+
     .editor-column:first-child {
         border-right: 1px solid #ced4da;
     }
+
     .editor-help {
         background-color: #f8f9fa;
         border-radius: 0.375rem;
         padding: 1rem;
         margin-top: 1rem;
     }
+
     .markdown-preview {
         padding: 1rem;
     }
+
     .markdown-preview img {
         max-width: 100%;
         height: auto;
     }
+
     .markdown-preview pre {
         background-color: #f8f9fa;
         padding: 1rem;
         border-radius: 0.375rem;
         overflow: auto;
     }
+
     .markdown-preview code {
         background-color: #f8f9fa;
         padding: 0.2rem 0.4rem;
         border-radius: 0.25rem;
     }
+
     .markdown-cheatsheet {
         display: grid;
         grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
         gap: 1.5rem;
         margin-top: 1rem;
     }
+
     .cheatsheet-item {
         background-color: #f8f9fa;
         border-radius: 0.5rem;
         padding: 1rem;
     }
+
     .cheatsheet-item h5 {
         border-bottom: 1px solid #dee2e6;
         padding-bottom: 0.5rem;
         margin-bottom: 1rem;
     }
+
     .cheatsheet-example {
         display: grid;
         grid-template-columns: 1fr 1fr;
         gap: 1rem;
         margin-bottom: 1rem;
     }
+
     .cheatsheet-example:last-child {
         margin-bottom: 0;
     }
+
     .cheatsheet-input {
         font-family: monospace;
         background-color: #e9ecef;
         padding: 0.5rem;
         border-radius: 0.25rem;
     }
+
     .cheatsheet-output {
         padding: 0.5rem;
     }
+
     .editor-actions {
         display: flex;
         gap: 0.5rem;
     }
+
     .btn-sm {
         padding: 0.25rem 0.5rem;
         font-size: 0.875rem;
     }
+
     .error-message {
         color: #dc3545;
         font-size: 0.875rem;
         margin-top: 0.25rem;
     }
+
     .is-invalid {
         border-color: #dc3545 !important;
     }
@@ -126,7 +150,7 @@
 {% endblock %}
 
 {% block content %}
-<div class="container">
+<div class="container" id="drop">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h1 class="h3 mb-0">编辑帖子</h1>
         <a href="{{ url_for('main.post_detail', post_id=post.id) }}" class="btn btn-sm btn-outline-secondary">
@@ -135,6 +159,10 @@
     </div>
 
     <form method="POST" id="postForm">
+        <div class="btn" id="btn" style="display: none">点击上传按钮</div>
+        <input type="file" id="PhotoUploadForm" onchange="onUpload(e)"
+               style="width: 100%;height: 100%;display: none">
+
         {{ form.hidden_tag() }}
 
         <div class="mb-3">
@@ -255,8 +283,10 @@
 <script src="/static/js/easymde.min.js"></script>
 <script src="/static/js/marked.min.js"></script>
 <script src="/static/js/purify.min.js"></script>
+<script src="/static/js/PhotoUpload.js"></script>
+
 <script>
-    document.addEventListener('DOMContentLoaded', function() {
+    document.addEventListener('DOMContentLoaded', function () {
         // 确保表单字段存在
         const formContentField = document.getElementById('markdownEditor');
         if (!formContentField) {
@@ -272,6 +302,11 @@
             status: false,
             minHeight: "350px",
             placeholder: "在此输入内容...",
+            previewImagesInEditor: true,
+            imageUploadFunction: upload,
+            uploadImage: true,
+            imageAccept: "image/png, image/jpeg, image/jpg, image/webp",
+            // imageUploadEndpoint: "/upload/pic",
             toolbar: [
                 "bold", "italic", "strikethrough", "|",
                 "heading-1", "heading-2", "heading-3", "|",
@@ -283,6 +318,7 @@
             ],
             initialValue: formContentField.value
         });
+        // easyMDE. = upload;
 
         // 添加自定义预览功能
         const updatePreview = () => {
@@ -351,7 +387,7 @@
         document.querySelector('[data-tab="edit"]').click();
 
         // 帮助面板切换
-        document.getElementById('toggleHelp').addEventListener('click', function() {
+        document.getElementById('toggleHelp').addEventListener('click', function () {
             const helpSection = document.getElementById('helpSection');
             if (helpSection.style.display === 'none') {
                 helpSection.style.display = 'block';
@@ -363,7 +399,7 @@
         });
 
         // 表单提交处理
-        document.getElementById('postForm').addEventListener('submit', function(e) {
+        document.getElementById('postForm').addEventListener('submit', function (e) {
             // 确保内容同步
             easyMDE.codemirror.save();
 

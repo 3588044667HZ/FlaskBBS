@@ -1,0 +1,621 @@
+{% extends "base.html" %}
+{% block title %}{{user.name}}站内消息 - Flask论坛{% endblock %}
+{% block head %}
+{{ super() }}
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>站内消息 - B站风格</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<!--todo:完成消息渲染部分-->
+<style>
+    * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+        font-family: "Microsoft YaHei", sans-serif;
+    }
+
+    body {
+        background-color: #f4f4f4;
+        color: #333;
+        line-height: 1.6;
+    }
+
+    .message-container {
+        display: flex;
+        max-width: 1200px;
+        margin: 20px auto;
+        background: #fff;
+        border-radius: 8px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        overflow: hidden;
+        height: calc(100vh - 100px);
+    }
+
+    /* 左侧会话列表样式 */
+    .sidebar {
+        width: 320px;
+        border-right: 1px solid #e7e7e7;
+        display: flex;
+        flex-direction: column;
+        float: left;
+        background-color: #fafafa;
+    }
+
+    .sidebar-header {
+        padding: 16px;
+        border-bottom: 1px solid #e7e7e7;
+        background-color: #fff;
+    }
+
+    .sidebar-title {
+        font-size: 18px;
+        font-weight: 600;
+        color: #18191c;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+
+    .search-box {
+        margin-top: 12px;
+        position: relative;
+    }
+
+    .search-box input {
+        width: 100%;
+        padding: 8px 12px 8px 32px;
+        border: 1px solid #e7e7e7;
+        border-radius: 4px;
+        font-size: 14px;
+        outline: none;
+        transition: border-color 0.2s;
+    }
+
+    .search-box input:focus {
+        border-color: #00a1d6;
+    }
+
+    .search-box i {
+        position: absolute;
+        left: 10px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: #999;
+    }
+
+    .session-list {
+        flex: 1;
+        overflow-y: auto;
+    }
+
+    .session-item {
+        display: flex;
+        padding: 12px 16px;
+        cursor: pointer;
+        border-bottom: 1px solid #f0f0f0;
+        transition: background-color 0.2s;
+        position: relative;
+    }
+
+    .session-item:hover {
+        background-color: #f5f5f5;
+    }
+
+    .session-item.active {
+        background-color: #e6f7ff;
+        border-right: 3px solid #00a1d6;
+    }
+
+    .session-avatar {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        margin-right: 12px;
+        overflow: hidden;
+        flex-shrink: 0;
+    }
+
+    .session-avatar img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    .session-content {
+        flex: 1;
+        min-width: 0;
+    }
+
+    .session-header {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 4px;
+    }
+
+    .session-name {
+        font-weight: 600;
+        font-size: 14px;
+        color: #18191c;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .session-time {
+        font-size: 12px;
+        color: #999;
+        flex-shrink: 0;
+    }
+
+    .session-preview {
+        font-size: 13px;
+        color: #666;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .unread-badge {
+        position: absolute;
+        top: 12px;
+        right: 16px;
+        background-color: #f56c6c;
+        color: white;
+        border-radius: 10px;
+        min-width: 18px;
+        height: 18px;
+        font-size: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    /* 右侧消息区域样式 */
+    .message-area {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        float: right;
+        background-color: #fff;
+    }
+
+    .message-header {
+        padding: 12px 16px;
+        border-bottom: 1px solid #e7e7e7;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        background-color: #fff;
+    }
+
+    .contact-info {
+        display: flex;
+        align-items: center;
+    }
+
+    .contact-avatar {
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        margin-right: 10px;
+        overflow: hidden;
+    }
+
+    .contact-avatar img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    .contact-name {
+        font-weight: 600;
+        font-size: 16px;
+    }
+
+    .header-actions {
+        display: flex;
+        gap: 12px;
+    }
+
+    .action-btn {
+        background: none;
+        border: none;
+        color: #666;
+        cursor: pointer;
+        font-size: 16px;
+        transition: color 0.2s;
+    }
+
+    .action-btn:hover {
+        color: #00a1d6;
+    }
+
+    .message-list {
+        flex: 1;
+        padding: 16px;
+        overflow-y: auto;
+        background-color: #f7f7f7;
+    }
+
+    .message-date {
+        text-align: center;
+        margin: 16px 0;
+        font-size: 12px;
+        color: #999;
+    }
+
+    .message-bubble {
+        max-width: 70%;
+        margin-bottom: 16px;
+        display: flex;
+        align-items: flex-start;
+    }
+
+    .message-bubble.received {
+        align-self: flex-start;
+    }
+
+    .message-bubble.sent {
+        align-self: flex-end;
+        flex-direction: row-reverse;
+        margin-left: auto;
+    }
+
+    .message-avatar {
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        margin: 0 8px;
+        flex-shrink: 0;
+    }
+
+    .message-avatar img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    .message-content {
+        background: #fff;
+        border-radius: 4px;
+        padding: 8px 12px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        position: relative;
+        max-width: 100%;
+    }
+
+    .message-bubble.sent .message-content {
+        background: #e1f5fe;
+    }
+
+    .message-text {
+        font-size: 14px;
+        line-height: 1.5;
+        word-wrap: break-word;
+    }
+
+    .message-time {
+        font-size: 12px;
+        color: #999;
+        margin-top: 4px;
+        text-align: right;
+    }
+
+    .message-input-area {
+        padding: 16px;
+        border-top: 1px solid #e7e7e7;
+        background-color: #fff;
+    }
+
+    .input-toolbar {
+        display: flex;
+        align-items: center;
+        margin-bottom: 10px;
+        gap: 10px;
+    }
+
+    .tool-btn {
+        background: none;
+        border: none;
+        color: #666;
+        cursor: pointer;
+        font-size: 16px;
+        transition: color 0.2s;
+    }
+
+    .tool-btn:hover {
+        color: #00a1d6;
+    }
+
+    .message-input {
+        width: 100%;
+        border: 1px solid #e7e7e7;
+        border-radius: 4px;
+        padding: 10px 12px;
+        resize: none;
+        outline: none;
+        font-size: 14px;
+        min-height: 60px;
+        transition: border-color 0.2s;
+    }
+
+    .message-input:focus {
+        border-color: #00a1d6;
+    }
+
+    .send-btn {
+        background-color: #00a1d6;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        padding: 8px 16px;
+        margin-top: 10px;
+        cursor: pointer;
+        font-size: 14px;
+        transition: background-color 0.2s;
+    }
+
+    .send-btn:hover {
+        background-color: #0090c1;
+    }
+
+    .system-notice {
+        background-color: #f0f7ff;
+        border-left: 3px solid #00a1d6;
+        padding: 12px;
+        margin-bottom: 16px;
+        border-radius: 4px;
+    }
+
+    .notice-title {
+        font-weight: 600;
+        margin-bottom: 6px;
+        color: #00a1d6;
+    }
+
+    .notice-text {
+        font-size: 14px;
+        line-height: 1.5;
+    }
+
+    .empty-state {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        height: 100%;
+        color: #999;
+    }
+
+    .empty-state i {
+        font-size: 48px;
+        margin-bottom: 16px;
+    }
+
+    /* 响应式设计 */
+    @media (max-width: 768px) {
+        .message-container {
+            flex-direction: column;
+            display: flex;
+
+            height: auto;
+        }
+
+        .sidebar {
+            width: 100%;
+            float: left;
+            max-height: 40vh;
+        }
+
+        .message-area {
+            min-height: 60vh;
+        }
+    }
+</style>
+{% endblock %}
+{% block content %}
+<div class="message-container">
+    <!-- 左侧会话列表 -->
+    <div class="sidebar">
+        <div class="sidebar-header">
+            <div class="sidebar-title">
+                <span>最近消息</span>
+                <i class="fas fa-cog"></i>
+            </div>
+            <div class="search-box">
+                <i class="fas fa-search"></i>
+                <input type="text" placeholder="搜索消息">
+            </div>
+        </div>
+        <div class="session-list">
+            {% for session in sessions %}
+            <div class="session-item" session="{{session.id}}">
+                <div class="session-avatar">
+                    <img src="{{session.get_other_user(user).avatar_url()}}"
+                         alt="{{session.get_other_user(user).username}}">
+                </div>
+                <div class="session-content">
+                    <div class="session-header">
+                        <div class="session-name">{{session.get_other_user(user).username}}</div>
+                        <div class="session-time">{{session.last_message.created_at}}</div>
+                    </div>
+                    <div class="session-preview">
+                        session.last_message.content
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+    <div class="message-area">
+        <div class="message-header">
+            <div class="contact-info">
+                <div class="contact-avatar">
+                    <img src={{session.get_other_user(user).avatar_url()}}
+                         alt="{{session.get_other_user(user).username}}">
+                </div>
+                <div class="contact-name">{{session.get_other_user(user).username}}</div>
+            </div>
+            <div class="header-actions">
+                <button class="action-btn"><i class="fas fa-phone-alt"></i></button>
+                <button class="action-btn"><i class="fas fa-video"></i></button>
+                <button class="action-btn"><i class="fas fa-ellipsis-h"></i></button>
+            </div>
+        </div>
+
+        <div class="message-list">
+            {% for message in session.messages %}
+            <div class="message-date">message.created_at</div>
+
+            {%if message.sender_id == user.id%}
+            <div class="message-bubble received">
+                <div class="message-avatar">
+                    <img src="{{session.get_other_user(user).avatar_url()}}"
+                         alt="{{session.get_other_user(user).username}}">
+                </div>
+                <div class="message-content">
+                    <div class="message-text">{{message.content}}</div>
+                    <div class="message-time">{{message.created_at}}</div>
+                </div>
+            </div>
+            {%else%}
+            <div class="message-bubble sent">
+                <div class="message-content">
+                    <div class="message-text">{{message.content}}</div>
+                    <div class="message-time">{{message.created_at}}</div>
+                </div>
+                <div class="message-avatar">
+                    <img src="{{user.avatar_url()}}" alt="我">
+                </div>
+            </div>
+            {%endif%}
+            {% endfor %}
+            {% endfor %}
+
+
+            <!--            <div class="system-notice">-->
+            <!--                <div class="notice-title">自动回复</div>-->
+            <!--                <div class="notice-text">感谢您的关注！我们的工作时间是周一至周五-->
+            <!--                    9:00-18:00，如需详细咨询请在此时间段内联系我们。-->
+            <!--                </div>-->
+            <!--            </div>-->
+        </div>
+
+        <div class="message-input-area">
+            <div class="input-toolbar">
+                <button class="tool-btn"><i class="far fa-smile"></i></button>
+                <button class="tool-btn"><i class="far fa-image"></i></button>
+                <button class="tool-btn"><i class="fas fa-paperclip"></i></button>
+                <button class="tool-btn"><i class="far fa-file"></i></button>
+            </div>
+            <textarea class="message-input" placeholder="输入消息..."></textarea>
+            <button class="send-btn">发送</button>
+        </div>
+    </div>
+</div>
+
+<!-- 右侧消息区域 -->
+
+
+<script>
+    // 简单的交互功能
+    document.addEventListener('DOMContentLoaded', function () {
+        // 会话项点击事件
+        const sessionItems = document.querySelectorAll('.session-item');
+        sessionItems.forEach(item => {
+            item.addEventListener('click', function () {
+                // 移除所有active类
+                sessionItems.forEach(i => i.classList.remove('active'));
+                // 为当前项添加active类
+                this.classList.add('active');
+
+                // 更新消息区域标题
+                const sessionName = this.querySelector('.session-name').textContent;
+                document.querySelector('.contact-name').textContent = sessionName;
+
+                // 移除未读标记
+                const unreadBadge = this.querySelector('.unread-badge');
+                if (unreadBadge) {
+                    unreadBadge.remove();
+                }
+            });
+        });
+
+        // 发送按钮点击事件
+        const sendBtn = document.querySelector('.send-btn');
+        const messageInput = document.querySelector('.message-input');
+
+        sendBtn.addEventListener('click', function () {
+            const messageText = messageInput.value.trim();
+            if (messageText) {
+                // 创建新的消息气泡
+                const messageList = document.querySelector('.message-list');
+                const newMessage = document.createElement('div');
+                newMessage.className = 'message-bubble sent';
+                newMessage.innerHTML = `
+                        <div class="message-content">
+                            <div class="message-text">${messageText}</div>
+                            <div class="message-time">刚刚</div>
+                        </div>
+                        <div class="message-avatar">
+                            <img src="{{user.avatar_url()}}" alt="我">
+                        </div>
+                    `;
+
+                // 添加到消息列表
+                messageList.appendChild(newMessage);
+
+                // 清空输入框
+
+
+                // 滚动到底部
+                messageList.scrollTop = messageList.scrollHeight;
+                // 发送聊天数据
+                let xhr = new XMLHttpRequest();
+// methods：GET/POST请求方式等，url：请求地址，true异步（可为false同步）
+                xhr.open("POST", "{{url_for('main.send_msg',user_id={{}})}}", true);
+
+                var data = JSON.stringify({content: messageInput.value, session_id:});
+                xhr.send();                                            // 发送
+                xhr.onreadystatechange = function () {                  // 判断
+                    if (xhr.readyState == 4 && ajax.status == 200) {   // 成功，接收到数据
+                        console.log(xhr.response);                 // 查看返回的数据(可输出 xhr 哈)
+                        //JSON.parse(xhr.response);                // 如果数据为字符串的对象，可转换一下
+                    } else if (xhr.status == 404) {                  // 失败，页面未找到
+                    }
+                }
+            }
+            messageInput.value = '';
+
+            // 模拟回复（3秒后）
+            // setTimeout(function () {
+            //     const replyMessage = document.createElement('div');
+            //     replyMessage.className = 'message-bubble received';
+            //     replyMessage.innerHTML = `
+            //             <div class="message-avatar">
+            //                 <img src="{{session.get_other_user(user).avatar_url()}}" alt="{{session.get_other_user(user).username}}">
+            //             </div>
+            //             <div class="message-content">
+            //                 <div class="message-text">[自动回复] 感谢您的留言，我们会尽快回复您！</div>
+            //                 <div class="message-time">刚刚</div>
+            //             </div>
+            //         `;
+            //     messageList.appendChild(replyMessage);
+            //     messageList.scrollTop = messageList.scrollHeight;
+            // }, 3000);
+
+        }
+    });
+
+    // 支持按Enter发送消息
+    messageInput.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            sendBtn.click();
+        }
+    });
+    })
+    ;
+</script>
+
+{%endblock%}

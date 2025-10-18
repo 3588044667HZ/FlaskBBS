@@ -15,6 +15,9 @@ from app import db
 from app.forms import CommentForm, EditPostForm, ProfileForm, PostForm
 from app.models import Post, Comment, Category, User, Permissions, Session, Message
 from app.utils import base_posts_query, create_posts_with_comment_count
+import hashlib
+
+# from run import app
 
 # import json
 
@@ -602,3 +605,29 @@ def get_all_sessions():
         })
         # print(sessions)
         return json.dumps(sessions)
+
+
+@main.route("/upload/pic", methods=['POST'])
+@login_required
+def upload_pic():
+    file = request.files['pic']
+    # print(file.stream
+    #       .read())
+    print(file.content_type)
+    # if file.content_type != 'image/jpeg' or file.content_type != 'image/png':
+    #     # flash("图片格式不正确", "danger")
+    #     return json.dumps({"error": "type error"})
+    if file.content_length > 204800:
+        flash("文件过大", "danger")
+        return json.dumps({"error": "size error"})
+    file_content = file.read()
+    md5 = hashlib.md5(file_content).hexdigest()
+    filename = secure_filename(md5 + '.jpg')
+    # file.save(os.path.join( filename))
+    pic_path = os.path.join(current_app.root_path, 'static', 'pics', filename)
+    with open(pic_path, 'wb') as f:
+        f.write(file_content)
+    return json.dumps({
+        'path': "/static/pics/" + filename ,
+        "status": "success"
+    })

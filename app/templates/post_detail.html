@@ -146,7 +146,7 @@
 
             <div class="post-content mb-4" id="postContent">
                 <!-- 内容将在JS中渲染 -->
-                {{ post.content|escape }}
+                {{ post.content }}
             </div>
 
             {% if current_user and (current_user == post.author or current_user.is_admin) %}
@@ -194,7 +194,8 @@
             <form method="POST" action="{{ url_for('main.add_comment', post_id=post.id) }}">
                 {{ form.hidden_tag() }}
                 <div class="mb-3">
-                    <textarea name="content" class="form-control" rows="4" placeholder="写下你的评论..." required></textarea>
+                    <textarea name="content" class="form-control" rows="4" placeholder="写下你的评论..."
+                              required></textarea>
                 </div>
                 <div class="d-flex justify-content-end">
                     <button type="submit" class="btn btn-primary">
@@ -242,7 +243,7 @@
 <script src="/static/js/purify.min.js"></script>
 <script src="/static/js/highlight.min.js"></script>
 <script>
-    document.addEventListener('DOMContentLoaded', function() {
+    document.addEventListener('DOMContentLoaded', function () {
         // 渲染帖子内容
         const postContentElement = document.getElementById('postContent');
         if (postContentElement) {
@@ -278,7 +279,7 @@
                 replyForm.classList.remove('d-none');
 
                 // 滚动到表单位置
-                replyForm.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                replyForm.scrollIntoView({behavior: 'smooth', block: 'nearest'});
             });
         });
 
